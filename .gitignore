@@ -48,6 +48,82 @@ media/inbound/*.avi
 
 # 敏感配置
 *.env
+*.env.local
+*.local
+config.local.json
+*.private.json
+dingtalk_config.json
+
+# 数据库
+*.sqlite3
+*.db
+!data/db/app.db
+
+# 日志目录
+logs/
+*.log
+
+# 临时/缓存目录
+tmp/
+temp/
+cache/
+data/tmp/
+data/cache/
+__pycache__/
+*.pyc
+*.pyo
+
+# 视频处理目录
+uploads/
+downloads/
+frames/
+clips/
+media/inbound/*.mp4
+media/inbound/*.MOV
+media/inbound/*.avi
+media/inbound/*.ogg
+media/inbound/*.amr
+
+# 模型中间产物
+*.task
+*.pb
+*.bin
+*.dat
+models/
+
+# 备份目录
+backups/
+*.backup
+*.tar.gz
+*.zip
+
+# 构建产物
+dist/
+build/
+*.egg-info/
+
+# 虚拟环境
+.venv/
+venv/
+ENV/
+node_modules/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 报告目录（可选）
+# reports/
+
+# PID 文件
+*.pid
+
+# Shell 脚本中的密钥
+start_*.sh
+watch_*.sh
 *.local
 config.local.json
 dingtalk_config.json
