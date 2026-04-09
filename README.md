@@ -11,7 +11,7 @@
 - ✅ **知识库对照**：169 条专业教练知识点
 - ✅ **量化指标**：MediaPipe 姿态分析（膝盖/肘部/肩部角度）
 - ✅ **通俗报告**：通俗易懂的改进建议
-- ✅ **多渠道路由**：钉钉/QQ 支持（飞书已禁用）
+- ✅ **多渠道路由**：钉钉/QQ 支持
 
 ---
 
@@ -36,9 +36,8 @@ sudo pip3.8 install -r requirements.txt
 # 1. 确保 OpenClaw Gateway 运行中
 openclaw gateway status
 
-# 2. 启动视频分析服务
-cd /home/admin/.openclaw/workspace/ai-coach
-python3.8 simple_integration.py &
+# 2. 系统已集成到 OpenClaw 渠道
+# 消息流程：钉钉/QQ → 适配器 → 路由器 → 执行层 → 分析层
 
 # 3. 测试
 在钉钉中发送网球发球视频
@@ -353,7 +352,7 @@ log_text_execution_failure(task, code, msg)
 **注意**:
 - 当前视频分析复用现有分析能力
 - 当前文本处理为轻量版本（占位）
-- 飞书渠道已禁用（阿里云版本）
+
 
 ### 消息流转
 
