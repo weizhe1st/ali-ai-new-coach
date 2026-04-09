@@ -300,6 +300,97 @@ log_text_execution_failure(task, code, msg)
 
 ---
 
+## Analysis Service Layer（统一分析服务层）
+
+### 分析服务架构
+
+执行层不再直接调用旧分析脚本，而是通过统一分析服务接入层：
+
+```
+TaskExecutor → AnalysisService → 旧分析能力（Qwen-VL 等）
+```
+
+### 核心模块
+
+**文件**: `analysis_service.py`
+
+**关键类**:
+```python
+class AnalysisService:
+    def analyze_video(task: UnifiedTask) -> dict:
+        # 校验输入（source_file_path）
+        # 调用旧分析能力
+        # 规范化返回结构
+```
+
+### 统一输入规范
+
+**唯一可信输入**:
+- `task.source_file_path` - 视频文件本地路径
+
+**可选辅助输入**:
+- `task.source_file_name` - 原始文件名
+- `task.source_file_url` - 原始 URL
+
+**强制要求**:
+- ❌ 不允许 fallback 到默认样例视频
+- ❌ 输入缺失时明确失败
+
+### 统一输出结构
+
+```python
+{
+  "success": True,
+  "analysis_type": "video",
+  "entry": "qwen_vl",  # 使用的分析入口
+  "summary": "NTRP 3.0 级（置信度 85%），综合评分 68/100",
+  "report": "🎾 网球发球分析报告\n...",
+  "structured_result": {
+    "ntrp_level": "3.0",
+    "confidence": 0.85,
+    "overall_score": 68,
+    "key_issues": [...],
+    "highlights": [...],
+    "training_priorities": [...]
+  },
+  "detailed_analysis": {...},
+  "coach_references": {...},
+  "raw_result": {...},  # 原始分析结果
+  "error": None,
+  "video_file": "/path/to/video.mp4",
+  "video_name": "video.mp4"
+}
+```
+
+**失败时**:
+```python
+{
+  "success": False,
+  "analysis_type": "video",
+  "error": {
+    "code": "VIDEO_SOURCE_PATH_MISSING",
+    "message": "task.source_file_path is not set"
+  }
+}
+```
+
+### 错误码
+
+- `VIDEO_SOURCE_PATH_MISSING` - 输入路径未设置
+- `VIDEO_SOURCE_PATH_NOT_FOUND` - 文件不存在
+- `VIDEO_ANALYSIS_FAILED` - 分析失败
+
+### 当前实现说明
+
+- ✅ 统一分析服务接入层
+- ✅ 输入统一为 source_file_path
+- ✅ 输出统一为标准结构
+- ✅ 执行层不再耦合旧脚本
+- ✅ 明确失败，不回退到默认样例
+- ❌ 旧分析内核未重写（通过适配层调用）
+
+---
+
 ## Video Input Preparation（视频输入准备）
 
 ### 视频输入处理流程

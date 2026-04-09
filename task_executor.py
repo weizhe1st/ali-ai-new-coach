@@ -33,6 +33,7 @@ from task_logger import (
     log_video_execution_failure
 )
 from video_input_handler import prepare_video_input
+from analysis_service import AnalysisService
 
 
 class TaskExecutor:
@@ -42,7 +43,7 @@ class TaskExecutor:
     职责：
     - 接收 UnifiedTask
     - 根据 task_type 执行对应逻辑
-    - 调用旧分析能力
+    - 调用统一分析服务
     - 统一错误处理
     - 统一结果包装
     - 任务状态跟踪
@@ -50,16 +51,11 @@ class TaskExecutor:
     """
     
     def __init__(self):
-        self.video_handler: Optional[Callable] = None
+        self.analysis_service = AnalysisService()
         self.text_handler: Optional[Callable] = None
         self.image_handler: Optional[Callable] = None
         
-        print("✅ TaskExecutor 已初始化（含状态跟踪和日志）")
-    
-    def register_video_handler(self, handler: Callable):
-        """注册视频分析处理器"""
-        self.video_handler = handler
-        print("  ✓ 视频分析处理器已注册")
+        print("✅ TaskExecutor 已初始化（含 AnalysisService、状态跟踪和日志）")
     
     def register_text_handler(self, handler: Callable):
         """注册文本消息处理器"""
@@ -108,7 +104,7 @@ class TaskExecutor:
         流程：
         1. 准备视频输入（解析来源、复制到工作目录）
         2. 校验 source_file_path
-        3. 调用旧分析能力
+        3. 调用统一分析服务
         
         Args:
             task: UnifiedTask 对象
@@ -155,23 +151,31 @@ class TaskExecutor:
         task.mark_running("executing_video")
         log_video_execution_start(task)
         
-        # 步骤 4: 调用现有分析能力
+        # 步骤 4: 调用统一分析服务
         try:
-            print(f"  📹 调用现有视频分析能力...")
+            print(f"  📹 调用统一分析服务...")
             
-            # 调用处理器（传入任务对象）
-            result = self.video_handler(task)
+            # 调用分析服务
+            analysis_result = self.analysis_service.analyze_video(task)
             
-            # 如果处理器返回了任务，使用返回的任务
-            if isinstance(result, UnifiedTask):
-                task = result
+            # 检查分析结果
+            if not analysis_result.get('success'):
+                error_code = analysis_result.get('error', {}).get('code', 'VIDEO_ANALYSIS_FAILED')
+                error_message = analysis_result.get('error', {}).get('message', 'Unknown analysis error')
+                task.mark_failed(error_code, error_message, "executing_video")
+                log_video_execution_failure(task, error_code, error_message)
+                return self._build_error_result(task, error_code, error_message)
             
             # 标记成功
-            task.mark_success("completed", result=task.result, report=task.report)
+            task.mark_success(
+                "completed",
+                result=analysis_result.get('structured_result'),
+                report=analysis_result.get('report')
+            )
             log_video_execution_success(task)
             
             print(f"  ✅ 视频分析完成")
-            return self._build_success_result(task, message)
+            return self._build_success_result(task, message, analysis_result)
             
         except Exception as e:
             print(f"  ❌ 视频分析失败：{e}")
@@ -270,18 +274,19 @@ class TaskExecutor:
             log_task_event(task, "image_execution_failed", f"Image analysis failed: {str(e)}")
             return self._build_error_result(task, "IMAGE_EXECUTION_ERROR", str(e))
     
-    def _build_success_result(self, task: UnifiedTask, message: UnifiedMessage) -> Dict[str, Any]:
+    def _build_success_result(self, task: UnifiedTask, message: UnifiedMessage, analysis_result: Dict[str, Any] = None) -> Dict[str, Any]:
         """
         构建成功结果
         
         Args:
             task: UnifiedTask 对象
             message: UnifiedMessage 对象
+            analysis_result: 分析结果（可选）
         
         Returns:
             dict: 统一成功结果
         """
-        return {
+        result = {
             'task_id': task.task_id,
             'task_type': task.task_type,
             'status': task.status,
@@ -294,6 +299,16 @@ class TaskExecutor:
             'started_at': task.started_at,
             'completed_at': task.completed_at
         }
+        
+        # 如果提供了分析结果，添加详细信息
+        if analysis_result:
+            result['analysis_entry'] = analysis_result.get('entry', 'unknown')
+            result['video_file'] = analysis_result.get('video_file')
+            result['video_name'] = analysis_result.get('video_name')
+            result['detailed_analysis'] = analysis_result.get('detailed_analysis')
+            result['coach_references'] = analysis_result.get('coach_references')
+        
+        return result
     
     def _build_error_result(self, task: UnifiedTask, error_code: str, error_message: str, message: UnifiedMessage = None) -> Dict[str, Any]:
         """
