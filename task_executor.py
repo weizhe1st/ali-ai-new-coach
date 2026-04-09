@@ -23,6 +23,7 @@ from task_logger import (
     log_task_start,
     log_task_success,
     log_task_failure,
+    log_task_event,
     log_text_execution_start,
     log_text_execution_success,
     log_text_execution_failure,
@@ -357,7 +358,7 @@ if __name__ == '__main__':
         task_type='video_analysis',
         channel='dingtalk',
         user_id='test_user',
-        video_path='/tmp/test.mp4'
+        source_file_path='/tmp/test.mp4'
     )
     
     result = executor.execute(task, message)
