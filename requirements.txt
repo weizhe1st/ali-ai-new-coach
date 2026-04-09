@@ -1,0 +1,29 @@
+# 网球 AI 教练系统 - Python 依赖
+
+# OpenAI API 兼容库（用于调用 Qwen API）
+openai<1.0
+
+# 计算机视觉
+opencv-python>=4.8.0
+mediapipe==0.10.11
+
+# 数据处理
+numpy>=1.24.0
+pandas>=2.0.0
+
+# HTTP 请求
+requests>=2.31.0
+
+# 数据处理和可视化
+matplotlib>=3.7.0
+
+# 其他依赖
+attrs>=21.0.0
+flatbuffers>=23.0.0
+protobuf>=3.20.0,<5.0.0
+
+# Flask（可选，用于独立服务）
+# flask>=2.3.0
+
+# 数据库
+# sqlite3  # Python 内置

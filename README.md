@@ -1,0 +1,294 @@
+# 🎾 网球 AI 教练系统
+
+**阿里云部署版本** | 基于原腾讯云系统迁移优化
+
+---
+
+## 📊 系统功能
+
+- ✅ **视频分析**：上传网球发球视频，AI 自动分析动作
+- ✅ **NTRP 评级**：精准评估球员等级（3.0-5.0）
+- ✅ **知识库对照**：169 条专业教练知识点
+- ✅ **量化指标**：MediaPipe 姿态分析（膝盖/肘部/肩部角度）
+- ✅ **通俗报告**：通俗易懂的改进建议
+- ✅ **多渠道路由**：钉钉/QQ/飞书支持
+
+---
+
+## 🚀 快速开始
+
+### 环境要求
+
+- Python 3.8+
+- OpenClaw Gateway
+- 阿里云服务器
+
+### 安装依赖
+
+```bash
+# Python 3.8 环境
+sudo pip3.8 install -r requirements.txt
+```
+
+### 启动服务
+
+```bash
+# 1. 确保 OpenClaw Gateway 运行中
+openclaw gateway status
+
+# 2. 启动视频分析服务
+cd /home/admin/.openclaw/workspace/ai-coach
+python3.8 simple_integration.py &
+
+# 3. 测试
+在钉钉中发送网球发球视频
+```
+
+---
+
+## 📁 项目结构
+
+```
+ai-coach/
+├── core/                      # 核心模块
+│   ├── core.py                # 核心配置和提示词
+│   ├── complete_analysis_service.py  # 主分析服务
+│   └── complete_report_generator.py  # 报告生成器
+├── services/                  # 服务模块
+│   ├── mediapipe_analyzer.py  # MediaPipe 姿态分析
+│   └── simple_integration.py  # OpenClaw 集成服务
+├── knowledge/                 # 知识库
+│   └── fused_knowledge/       # 169 条融合知识
+├── data/db/                   # 数据库
+│   └── app.db                 # 含黄金标准表
+├── reports/                   # 分析报告
+├── media/inbound/             # 输入视频（临时）
+├── .gitignore
+├── requirements.txt
+└── README.md
+```
+
+---
+
+## 🎯 核心功能
+
+### 1. MediaPipe 姿态分析
+
+```python
+from mediapipe_analyzer import MediaPipeAnalyzer
+
+analyzer = MediaPipeAnalyzer()
+metrics = analyzer.analyze_video('video.mp4')
+
+# 输出：
+# - 膝盖角度：145.3° (平均)
+# - 肘部角度：172.2° (最大)
+# - 肩部旋转：76.0°
+```
+
+### 2. AI 视频分析
+
+使用 `qwen-vl-max` 进行视觉分析：
+- 三步分析法（观察 → 对照 → 输出）
+- 169 条教练知识库对照
+- NTRP 黄金标准评级
+
+### 3. 通俗化报告生成
+
+```
+🎾 网球发球分析报告
+
+📊 综合评估
+  NTRP 等级：3.0
+  置信度：85%
+  综合评分：68/100
+
+✅ 做得好的地方
+  ✓ 抛球手释放时手指自然张开
+  ✓ 完成完整挥拍路径
+
+⚠️ 需要改进
+  🟠 [抛球] 抛球方向偏了
+  🟠 [蓄力] 手肘抬得不够高
+
+💪 训练建议
+  1. 调整抛球方向
+  2. 强化奖杯姿势训练
+```
+
+---
+
+## 📊 技术架构
+
+```
+钉钉用户 → OpenClaw Gateway → 视频保存
+                                    ↓
+                          simple_integration.py
+                                    ↓
+                          ├─ MediaPipe 量化分析
+                          ├─ qwen-vl-max 视觉分析
+                          └─ 知识库对照
+                                    ↓
+                          生成通俗化报告
+                                    ↓
+                          保存到 reports/
+```
+
+---
+
+## 🔧 配置说明
+
+### 模型配置
+
+编辑 `core.py`:
+```python
+MODEL_NAME = 'qwen-max'  # 文本分析
+# 或
+MODEL_NAME = 'qwen-vl-max'  # 视频分析
+```
+
+### API Key 配置
+
+```bash
+export DASHSCOPE_API_KEY="sk-xxxxxxxxxxxxxxxx"
+```
+
+### 数据库配置
+
+```python
+DB_PATH = '/home/admin/.openclaw/workspace/ai-coach/data/db/app.db'
+```
+
+---
+
+## 📝 使用示例
+
+### 发送视频分析
+
+1. 在钉钉中找到网球 AI 教练机器人
+2. 发送网球发球视频（MP4 格式，< 20MB）
+3. 等待 1-2 分钟
+4. 收到 AI 分析报告
+
+### 查看历史报告
+
+```bash
+ls -lt /home/admin/.openclaw/workspace/ai-coach/reports/
+```
+
+### 查询数据库
+
+```bash
+sqlite3 data/db/app.db
+SELECT * FROM video_analysis_tasks ORDER BY created_at DESC LIMIT 10;
+```
+
+---
+
+## 🐛 故障排查
+
+### 服务未运行
+
+```bash
+# 检查进程
+ps aux | grep simple_integration
+
+# 重启服务
+python3.8 simple_integration.py &
+```
+
+### MediaPipe 无法加载
+
+```bash
+# 检查 Python 版本
+python3.8 --version  # 需要 3.8+
+
+# 重新安装
+sudo pip3.8 install mediapipe==0.10.11 --no-deps
+```
+
+### 视频分析失败
+
+检查日志：
+```bash
+tail -f simple_integration.log
+```
+
+---
+
+## 📈 性能指标
+
+| 指标 | 值 |
+|------|-----|
+| 视频分析时间 | 30-60 秒 |
+| MediaPipe 检测率 | > 95% |
+| 报告生成时间 | < 5 秒 |
+| 支持视频格式 | MP4, MOV, AVI |
+| 最大视频大小 | 20MB |
+
+---
+
+## 📚 知识库来源
+
+- **杨超教练**: 71 条（NTRP 分级标准）
+- **赵凌曦教练**: 41 条（节奏与纠错）
+- **Yellow 教练**: 57 条（动作细节）
+
+总计：**169 条**专业教练知识
+
+---
+
+## 🔄 版本历史
+
+### v2.0 (2026-04-09) - 阿里云版本
+- ✅ 迁移到阿里云
+- ✅ Python 3.8 升级
+- ✅ MediaPipe 集成
+- ✅ 报告通俗化优化
+- ✅ OpenClaw 集成
+
+### v1.0 (2026-04-01) - 腾讯云版本
+- ✅ 初始版本
+- ✅ 三步分析法
+- ✅ 知识库融合
+- ✅ 黄金标准数据库
+
+---
+
+## 🤝 协作开发
+
+### Git 工作流
+
+```bash
+# 1. 克隆仓库
+git clone https://github.com/weizhe1st/ali-ai-new-coach.git
+
+# 2. 创建分支
+git checkout -b feature/new-feature
+
+# 3. 提交修改
+git add .
+git commit -m "feat: 添加新功能"
+
+# 4. 推送
+git push origin feature/new-feature
+
+# 5. 创建 Pull Request
+```
+
+---
+
+## 📞 联系方式
+
+- **GitHub**: https://github.com/weizhe1st/ali-ai-new-coach
+- **问题反馈**: 请在 GitHub 提交 Issue
+
+---
+
+## 📄 许可证
+
+本项目仅供学习和研究使用。
+
+---
+
+**🎾 享受网球，享受 AI 带来的便利！**

@@ -1,0 +1,75 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+ENV/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 临时文件
+*.log
+*.tmp
+*.temp
+
+# 临时视频文件
+media/inbound/*.mp4
+media/inbound/*.MOV
+media/inbound/*.avi
+
+# 分析报告（可选，根据需要决定是否提交）
+# reports/*.json
+# reports/*.txt
+
+# 敏感配置
+*.env
+*.local
+config.local.json
+dingtalk_config.json
+*.private.json
+
+# 数据库备份
+*.backup
+*.db.backup
+
+# 大型模型文件
+*.task
+*.pb
+*.bin
+*.dat
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pytest
+.pytest_cache/
+.coverage
+htmlcov/
+
+# mypy
+.mypy_cache/
