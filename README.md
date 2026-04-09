@@ -170,9 +170,8 @@ DB_PATH = '/home/admin/.openclaw/workspace/ai-coach/data/db/app.db'
 ```
 ┌─────────────────────────────────────┐
 │  接入层 (Adapters)                   │
-│  - 钉钉适配器                        │
-│  - QQ 适配器                         │
-│  - 飞书适配器                        │
+│  - 钉钉适配器 (dingtalk_adapter.py)  │
+│  - QQ 适配器 (qq_adapter.py)         │
 └──────────────┬──────────────────────┘
                │
                ↓
@@ -180,7 +179,7 @@ DB_PATH = '/home/admin/.openclaw/workspace/ai-coach/data/db/app.db'
 │  路由层 (Router)                     │
 │  - 统一消息结构 (UnifiedMessage)     │
 │  - 统一任务结构 (UnifiedTask)        │
-│  - 消息路由 (MessageRouter)          │
+│  - 消息路由 (router.py)              │
 └──────────────┬──────────────────────┘
                │
                ↓
@@ -192,6 +191,36 @@ DB_PATH = '/home/admin/.openclaw/workspace/ai-coach/data/db/app.db'
 │  - 知识库处理                        │
 └─────────────────────────────────────┘
 ```
+
+### 渠道接入说明
+
+当前系统支持以下渠道：
+
+1. **钉钉（主入口）**
+   - 适配器：`adapters/dingtalk_adapter.py`
+   - 消息类型：文本、视频、图片、文件
+   - 状态：✅ 已接入统一路由
+
+2. **QQ（辅入口）**
+   - 适配器：`adapters/qq_adapter.py`
+   - 消息类型：文本、视频、图片、文件
+   - 状态：✅ 已接入统一路由
+
+**消息流转流程**:
+```
+渠道原始消息 → 适配器 → UnifiedMessage → Router → UnifiedTask → 分析服务
+```
+
+**渠道适配器职责**:
+- 只负责解析原始消息
+- 转换为统一消息格式
+- 不处理业务逻辑
+- 不直接调用分析服务
+
+**注意**:
+- 当前视频分析复用现有分析能力
+- 当前文本处理为轻量版本（占位）
+- 飞书渠道已禁用（阿里云版本）
 
 ### 消息流转
 

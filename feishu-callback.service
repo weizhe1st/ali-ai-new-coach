@@ -1,0 +1,16 @@
+[Unit]
+Description=Feishu Callback Server (Tennis AI Coach)
+After=network.target
+
+[Service]
+Type=simple
+User=admin
+WorkingDirectory=/home/admin/.openclaw/workspace/ai-coach
+ExecStart=/usr/bin/python3 feishu_cos_analyzer.py server
+Restart=always
+RestartSec=5
+StandardOutput=append:/home/admin/.openclaw/workspace/ai-coach/feishu_server.log
+StandardError=append:/home/admin/.openclaw/workspace/ai-coach/feishu_server.log
+
+[Install]
+WantedBy=multi-user.target

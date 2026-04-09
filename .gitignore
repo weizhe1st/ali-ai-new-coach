@@ -4,6 +4,8 @@ __pycache__/
 *$py.class
 *.so
 .Python
+*.pyc
+*.pyo
 build/
 develop-eggs/
 dist/
@@ -72,6 +74,9 @@ data/cache/
 __pycache__/
 *.pyc
 *.pyo
+
+# 模型定义目录（保留，但忽略缓存）
+models/__pycache__/
 
 # 视频处理目录
 uploads/
