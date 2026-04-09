@@ -11,7 +11,7 @@
 - ✅ **知识库对照**：169 条专业教练知识点
 - ✅ **量化指标**：MediaPipe 姿态分析（膝盖/肘部/肩部角度）
 - ✅ **通俗报告**：通俗易懂的改进建议
-- ✅ **多渠道路由**：钉钉/QQ/飞书支持
+- ✅ **多渠道路由**：钉钉/QQ 支持（飞书已禁用）
 
 ---
 
@@ -50,14 +50,19 @@ python3.8 simple_integration.py &
 
 ```
 ai-coach/
-├── core/                      # 核心模块
-│   ├── core.py                # 核心配置和提示词
+├── models/                    # 数据模型
+│   ├── message.py             # 统一消息结构
+│   └── task.py                # 统一任务结构
+├── adapters/                  # 渠道适配器
+│   ├── dingtalk_adapter.py    # 钉钉适配器
+│   └── qq_adapter.py          # QQ 适配器
+├── router.py                  # 路由层
+├── task_executor.py           # 执行层
+├── 核心模块
+│   ├── core.py                # 核心配置
 │   ├── complete_analysis_service.py  # 主分析服务
 │   └── complete_report_generator.py  # 报告生成器
-├── services/                  # 服务模块
-│   ├── mediapipe_analyzer.py  # MediaPipe 姿态分析
-│   └── simple_integration.py  # OpenClaw 集成服务
-├── knowledge/                 # 知识库
+├── 知识库
 │   └── fused_knowledge/       # 169 条融合知识
 ├── data/db/                   # 数据库
 │   └── app.db                 # 含黄金标准表
@@ -170,47 +175,48 @@ DB_PATH = '/home/admin/.openclaw/workspace/ai-coach/data/db/app.db'
 ```
 ┌─────────────────────────────────────┐
 │  接入层 (Adapters)                   │
-│  - 钉钉适配器 (dingtalk_adapter.py)  │
-│  - QQ 适配器 (qq_adapter.py)         │
+│  - 钉钉适配器 (adapters/dingtalk_adapter.py) │
+│  - QQ 适配器 (adapters/qq_adapter.py)        │
 └──────────────┬──────────────────────┘
                │
                ↓
 ┌─────────────────────────────────────┐
-│  路由层 (Router)                     │
-│  - 统一消息结构 (UnifiedMessage)     │
-│  - 统一任务结构 (UnifiedTask)        │
-│  - 消息路由 (router.py)              │
+│  路由层 (router.py)                  │
+│  - 接收 UnifiedMessage               │
+│  - 创建 UnifiedTask                  │
+│  - 交给 TaskExecutor                 │
 └──────────────┬──────────────────────┘
                │
                ↓
 ┌─────────────────────────────────────┐
-│  执行层 (TaskExecutor)               │
-│  - 任务执行服务 (task_executor.py)   │
+│  执行层 (task_executor.py)           │
+│  - 执行视频分析任务                  │
+│  - 执行文本处理任务                  │
 │  - 统一错误处理                      │
 │  - 统一结果包装                      │
 └──────────────┬──────────────────────┘
                │
                ↓
 ┌─────────────────────────────────────┐
-│  分析层 (Services)                   │
-│  - 视频分析 (complete_analysis)      │
-│  - MediaPipe 分析                    │
-│  - 报告生成                          │
-│  - 知识库处理                        │
+│  分析层 (核心模块)                    │
+│  - complete_analysis_service.py      │
+│  - complete_report_generator.py      │
+│  - mediapipe_analyzer.py             │
+│  - fused_knowledge/                  │
 └─────────────────────────────────────┘
 ```
 
 ### 各层职责
 
 **接入层**:
-- 接收渠道原始消息
+- 接收渠道原始消息（钉钉/QQ）
 - 转换为 UnifiedMessage
 - 不处理业务逻辑
 
 **路由层**:
 - 接收 UnifiedMessage
 - 创建 UnifiedTask
-- 交给执行层处理
+- 交给 TaskExecutor 执行
 - 不直接执行业务
 
 **执行层**:
@@ -277,12 +283,11 @@ DB_PATH = '/home/admin/.openclaw/workspace/ai-coach/data/db/app.db'
 
 ```python
 from router import MessageRouter, from_dingtalk
-from models.task import UnifiedTask
 
-# 创建路由器
+# 创建路由器（包含 TaskExecutor）
 router = MessageRouter()
 
-# 注册视频分析处理器
+# 注册视频分析处理器（可选）
 router.register_video_handler(your_video_handler)
 
 # 接收钉钉消息
@@ -292,12 +297,27 @@ message = from_dingtalk(
     file_path='/path/to/video.mp4'
 )
 
-# 路由处理
-task = router.route_message(message)
+# 路由处理（自动交给 TaskExecutor 执行）
+result = router.route_message(message)
 
-# 获取结果
-print(f"任务状态：{task.status}")
-print(f"分析报告：{task.report}")
+# 获取统一结果
+print(f"任务状态：{result['status']}")
+print(f"任务 ID: {result['task_id']}")
+print(f"分析报告：{result['report']}")
+```
+
+**返回结果结构**:
+```python
+{
+  "task_id": "uuid",
+  "task_type": "video_analysis",
+  "status": "success",
+  "channel": "dingtalk",
+  "message_type": "video",
+  "result": {...},
+  "report": "分析报告",
+  "error": None
+}
 ```
 
 ### 查看历史报告
