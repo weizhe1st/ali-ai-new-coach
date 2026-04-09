@@ -215,6 +215,8 @@ DB_PATH = '/home/admin/.openclaw/workspace/ai-coach/data/db/app.db'
 - 调用旧分析能力
 - 统一错误处理
 - 统一结果包装
+- **任务状态跟踪**
+- **任务日志记录**
 
 **关键类**:
 ```python
@@ -233,13 +235,69 @@ class TaskExecutor:
 {
   "task_id": "uuid",
   "task_type": "video_analysis",
-  "status": "success",
+  "status": "success",           # created/running/success/failed
+  "current_stage": "completed",  # 当前执行阶段
   "channel": "dingtalk",
   "result": {...},
   "report": "分析报告",
-  "error": None
+  "error": None,
+  "started_at": "2026-04-09T...",
+  "completed_at": "2026-04-09T..."
 }
 ```
+
+---
+
+## Task Status and Logging（任务状态与日志）
+
+### 任务状态管理
+
+**UnifiedTask 状态字段**:
+- `status`: created → running → success/failed
+- `current_stage`: 当前执行阶段（如 executing_video, executing_text）
+- `error_code`: 错误码（失败时）
+- `error_message`: 错误信息（失败时）
+- `started_at`: 开始时间
+- `completed_at`: 完成时间
+
+**状态更新方法**:
+```python
+task.mark_running("executing_video")
+task.mark_success("completed", result=..., report=...)
+task.mark_failed("VIDEO_EXECUTION_ERROR", "错误信息", "executing_video")
+```
+
+### 任务日志记录
+
+**轻量日志模块**: `task_logger.py`
+
+**日志函数**:
+```python
+log_task_start(task, stage)
+log_task_success(task, stage)
+log_task_failure(task, error_code, error_message)
+log_video_execution_start(task)
+log_video_execution_success(task)
+log_video_execution_failure(task, code, msg)
+log_text_execution_start(task)
+log_text_execution_success(task)
+log_text_execution_failure(task, code, msg)
+```
+
+**日志输出**:
+```
+[2026-04-09T03:33:55.394] Task[4bc5b861] text_execution_started - Starting text task execution
+[2026-04-09T03:33:55.394] Task[4bc5b861] text_execution_succeeded - Text task completed successfully
+```
+
+### 当前实现说明
+
+- ✅ 已实现最小任务状态管理
+- ✅ 已实现轻量日志记录
+- ✅ TaskExecutor 是统一状态流转入口
+- ✅ 日志当前为简单打印，后续可升级为正式日志系统
+- ❌ 未引入数据库任务表
+- ❌ 未引入异步队列
 
 ### 各层职责
 
