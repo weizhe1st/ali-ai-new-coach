@@ -189,7 +189,8 @@ DB_PATH = '/home/admin/.openclaw/workspace/ai-coach/data/db/app.db'
                │
                ↓
 ┌─────────────────────────────────────┐
-│  执行层 (task_executor.py)           │
+│  执行层 (task_executor.py)           │  ← Task Execution Layer
+│  - TaskExecutor 类                   │
 │  - 执行视频分析任务                  │
 │  - 执行文本处理任务                  │
 │  - 统一错误处理                      │
@@ -204,6 +205,40 @@ DB_PATH = '/home/admin/.openclaw/workspace/ai-coach/data/db/app.db'
 │  - mediapipe_analyzer.py             │
 │  - fused_knowledge/                  │
 └─────────────────────────────────────┘
+```
+
+### Task Execution Layer（执行层）
+
+**职责**:
+- 接收 UnifiedTask
+- 根据 task_type 分发执行
+- 调用旧分析能力
+- 统一错误处理
+- 统一结果包装
+
+**关键类**:
+```python
+class TaskExecutor:
+    def execute(task, message) -> dict:
+        # 根据 task_type 执行
+        if task.task_type == "video_analysis":
+            return _execute_video(task, message)
+        elif task.task_type == "chat":
+            return _execute_text(task, message)
+        # ...
+```
+
+**统一返回结构**:
+```python
+{
+  "task_id": "uuid",
+  "task_type": "video_analysis",
+  "status": "success",
+  "channel": "dingtalk",
+  "result": {...},
+  "report": "分析报告",
+  "error": None
+}
 ```
 
 ### 各层职责
@@ -284,11 +319,16 @@ DB_PATH = '/home/admin/.openclaw/workspace/ai-coach/data/db/app.db'
 ```python
 from router import MessageRouter, from_dingtalk
 
-# 创建路由器（包含 TaskExecutor）
+# 创建路由器（内部包含 TaskExecutor）
 router = MessageRouter()
 
-# 注册视频分析处理器（可选）
-router.register_video_handler(your_video_handler)
+# 注册视频分析处理器（连接到旧分析能力）
+def my_video_handler(task):
+    # 调用旧分析能力
+    from complete_analysis_service import analyze_video_complete
+    return analyze_video_complete(task.video_path)
+
+router.register_video_handler(my_video_handler)
 
 # 接收钉钉消息
 message = from_dingtalk(
@@ -297,7 +337,8 @@ message = from_dingtalk(
     file_path='/path/to/video.mp4'
 )
 
-# 路由处理（自动交给 TaskExecutor 执行）
+# 路由处理
+# MessageRouter -> TaskExecutor -> 旧分析能力
 result = router.route_message(message)
 
 # 获取统一结果
@@ -318,6 +359,17 @@ print(f"分析报告：{result['report']}")
   "report": "分析报告",
   "error": None
 }
+```
+
+**流程说明**:
+```
+钉钉消息 → adapters/dingtalk_adapter.py → UnifiedMessage
+                                      ↓
+                              router.py (MessageRouter)
+                                      ↓
+                              task_executor.py (TaskExecutor)
+                                      ↓
+                              complete_analysis_service.py
 ```
 
 ### 查看历史报告
