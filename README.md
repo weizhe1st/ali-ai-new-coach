@@ -298,6 +298,87 @@ log_text_execution_failure(task, code, msg)
 - ❌ 未引入数据库任务表
 - ❌ 未引入异步队列
 
+---
+
+## Video Input Preparation（视频输入准备）
+
+### 视频输入处理流程
+
+视频任务进入执行层后，先经过输入准备层：
+
+```
+原始消息 → video_input_handler → 工作目录 → source_file_path → 旧分析能力
+```
+
+### 核心模块
+
+**文件**: `video_input_handler.py`
+
+**关键函数**:
+```python
+prepare_video_input(task, message) -> UnifiedTask
+build_task_workdir(task) -> str
+resolve_video_source(task, message) -> dict
+```
+
+### 工作目录结构
+
+```
+data/tasks/{task_id}/
+├── input/
+│   └── source.mp4      # 视频输入文件
+├── output/              # 分析输出
+└── logs/                # 任务日志
+```
+
+### 视频来源解析优先级
+
+1. ✅ `task.source_file_path` 已存在且文件存在
+2. ✅ `message.file_path` 存在
+3. ✅ `message.extra` 中有路径信息
+4. ⚠️ `message.file_url` 存在（当前不支持，明确失败）
+5. ❌ 无输入（明确失败，**不允许 fallback 到默认样例**）
+
+### 错误处理
+
+**输入缺失**:
+```python
+task.mark_failed("VIDEO_INPUT_MISSING", "...", "preparing_video_input")
+```
+
+**URL 不支持**:
+```python
+task.mark_failed("VIDEO_URL_NOT_SUPPORTED", "...", "preparing_video_input")
+```
+
+**文件复制失败**:
+```python
+task.mark_failed("VIDEO_FILE_COPY_FAILED", "...", "preparing_video_input")
+```
+
+### 状态流转
+
+```
+created → preparing_video_input → executing_video → success/failed
+```
+
+### 日志记录
+
+```
+[timestamp] Task[task_id] workdir_created - Task workdir created at ...
+[timestamp] Task[task_id] video_file_copied - Video file copied from ... to ...
+[timestamp] Task[task_id] video_input_prepared - Video input prepared at ...
+```
+
+### 当前实现说明
+
+- ✅ 统一解析视频输入来源
+- ✅ 统一生成任务工作目录
+- ✅ 统一写入 source_file_path
+- ✅ 明确失败，不回退到默认样例
+- ❌ 未实现 URL 下载器（后续可扩展）
+- ❌ 未实现对象存储集成
+
 ### 各层职责
 
 **接入层**:

@@ -12,6 +12,7 @@ import os
 import sys
 from typing import Dict, Any, Optional, Callable
 from datetime import datetime
+from pathlib import Path
 
 # 添加项目路径
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -31,6 +32,7 @@ from task_logger import (
     log_video_execution_success,
     log_video_execution_failure
 )
+from video_input_handler import prepare_video_input
 
 
 class TaskExecutor:
@@ -103,6 +105,11 @@ class TaskExecutor:
         """
         执行视频分析任务
         
+        流程：
+        1. 准备视频输入（解析来源、复制到工作目录）
+        2. 校验 source_file_path
+        3. 调用旧分析能力
+        
         Args:
             task: UnifiedTask 对象
             message: UnifiedMessage 对象
@@ -113,22 +120,42 @@ class TaskExecutor:
         
         print(f"  🎬 执行视频分析...")
         
-        # 标记开始执行
+        # 步骤 1: 准备视频输入
+        print(f"  📥 准备视频输入...")
+        task = prepare_video_input(task, message)
+        
+        # 检查视频输入准备是否成功
+        if task.status == 'failed':
+            print(f"  ❌ 视频输入准备失败：{task.error_code}")
+            # 错误已在 prepare_video_input 中记录
+            return self._build_error_result(task, task.error_code, task.error_message, message)
+        
+        # 步骤 2: 校验 source_file_path
+        if not task.source_file_path:
+            task.mark_failed(
+                "VIDEO_PATH_MISSING",
+                "source_file_path is not set after video input preparation",
+                "preparing_video_input"
+            )
+            log_task_event(task, "video_path_missing", "source_file_path is not set")
+            return self._build_error_result(task, "VIDEO_PATH_MISSING", "source_file_path is not set", message)
+        
+        if not os.path.exists(task.source_file_path):
+            task.mark_failed(
+                "VIDEO_FILE_NOT_FOUND",
+                f"Video file not found at {task.source_file_path}",
+                "preparing_video_input"
+            )
+            log_task_event(task, "video_file_not_found", f"File not found at {task.source_file_path}")
+            return self._build_error_result(task, "VIDEO_FILE_NOT_FOUND", f"Video file not found", message)
+        
+        print(f"  ✅ 视频输入已准备：{task.source_file_path}")
+        
+        # 步骤 3: 标记开始执行
         task.mark_running("executing_video")
         log_video_execution_start(task)
         
-        # 检查是否注册了处理器
-        if not self.video_handler:
-            print(f"  ⚠️  视频分析处理器未注册，返回占位结果")
-            task.mark_success(
-                "completed",
-                result={'ntrp_level': 'N/A', 'confidence': 0, 'overall_score': 0},
-                report="视频分析功能已就绪，请配置分析处理器"
-            )
-            log_video_execution_success(task)
-            return self._build_success_result(task, message)
-        
-        # 调用现有分析能力
+        # 步骤 4: 调用现有分析能力
         try:
             print(f"  📹 调用现有视频分析能力...")
             

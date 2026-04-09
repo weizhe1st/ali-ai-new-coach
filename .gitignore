@@ -44,6 +44,9 @@ media/inbound/*.mp4
 media/inbound/*.MOV
 media/inbound/*.avi
 
+# 任务工作目录
+data/tasks/
+
 # 分析报告（可选，根据需要决定是否提交）
 # reports/*.json
 # reports/*.txt
