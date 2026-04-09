@@ -161,6 +161,46 @@ DB_PATH = '/home/admin/.openclaw/workspace/ai-coach/data/db/app.db'
 
 ---
 
+## 🏗️ 系统架构
+
+### 分层设计
+
+系统采用三层架构：
+
+```
+┌─────────────────────────────────────┐
+│  接入层 (Adapters)                   │
+│  - 钉钉适配器                        │
+│  - QQ 适配器                         │
+│  - 飞书适配器                        │
+└──────────────┬──────────────────────┘
+               │
+               ↓
+┌─────────────────────────────────────┐
+│  路由层 (Router)                     │
+│  - 统一消息结构 (UnifiedMessage)     │
+│  - 统一任务结构 (UnifiedTask)        │
+│  - 消息路由 (MessageRouter)          │
+└──────────────┬──────────────────────┘
+               │
+               ↓
+┌─────────────────────────────────────┐
+│  分析层 (Services)                   │
+│  - 视频分析 (complete_analysis)      │
+│  - MediaPipe 分析                    │
+│  - 报告生成                          │
+│  - 知识库处理                        │
+└─────────────────────────────────────┘
+```
+
+### 消息流转
+
+1. **渠道消息** → 适配器 → `UnifiedMessage`
+2. **UnifiedMessage** → 路由器 → `UnifiedTask`
+3. **UnifiedTask** → 分析服务 → 报告
+
+---
+
 ## 📝 使用示例
 
 ### 发送视频分析
@@ -169,6 +209,33 @@ DB_PATH = '/home/admin/.openclaw/workspace/ai-coach/data/db/app.db'
 2. 发送网球发球视频（MP4 格式，< 20MB）
 3. 等待 1-2 分钟
 4. 收到 AI 分析报告
+
+### 代码示例
+
+```python
+from router import MessageRouter, from_dingtalk
+from models.task import UnifiedTask
+
+# 创建路由器
+router = MessageRouter()
+
+# 注册视频分析处理器
+router.register_video_handler(your_video_handler)
+
+# 接收钉钉消息
+message = from_dingtalk(
+    user_id='user_123',
+    text='帮我分析这个发球',
+    file_path='/path/to/video.mp4'
+)
+
+# 路由处理
+task = router.route_message(message)
+
+# 获取结果
+print(f"任务状态：{task.status}")
+print(f"分析报告：{task.report}")
+```
 
 ### 查看历史报告
 
