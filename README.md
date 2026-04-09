@@ -165,7 +165,7 @@ DB_PATH = '/home/admin/.openclaw/workspace/ai-coach/data/db/app.db'
 
 ### 分层设计
 
-系统采用三层架构：
+系统采用四层架构：
 
 ```
 ┌─────────────────────────────────────┐
@@ -184,6 +184,14 @@ DB_PATH = '/home/admin/.openclaw/workspace/ai-coach/data/db/app.db'
                │
                ↓
 ┌─────────────────────────────────────┐
+│  执行层 (TaskExecutor)               │
+│  - 任务执行服务 (task_executor.py)   │
+│  - 统一错误处理                      │
+│  - 统一结果包装                      │
+└──────────────┬──────────────────────┘
+               │
+               ↓
+┌─────────────────────────────────────┐
 │  分析层 (Services)                   │
 │  - 视频分析 (complete_analysis)      │
 │  - MediaPipe 分析                    │
@@ -191,6 +199,32 @@ DB_PATH = '/home/admin/.openclaw/workspace/ai-coach/data/db/app.db'
 │  - 知识库处理                        │
 └─────────────────────────────────────┘
 ```
+
+### 各层职责
+
+**接入层**:
+- 接收渠道原始消息
+- 转换为 UnifiedMessage
+- 不处理业务逻辑
+
+**路由层**:
+- 接收 UnifiedMessage
+- 创建 UnifiedTask
+- 交给执行层处理
+- 不直接执行业务
+
+**执行层**:
+- 接收 UnifiedTask
+- 根据 task_type 执行
+- 调用旧分析能力
+- 统一错误处理
+- 统一结果包装
+
+**分析层**:
+- 视频分析核心逻辑
+- MediaPipe 姿态分析
+- 报告生成
+- 知识库处理
 
 ### 渠道接入说明
 
