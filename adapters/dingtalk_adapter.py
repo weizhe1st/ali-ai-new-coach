@@ -77,12 +77,28 @@ def parse_dingtalk_message(payload: Dict[str, Any]) -> UnifiedMessage:
     elif msg_type in ['video', 'file']:
         attachment = payload.get('attachment', {})
         if isinstance(attachment, dict):
-            file_url = attachment.get('downloadUrl') or attachment.get('url')
+            download_url = attachment.get('downloadUrl') or attachment.get('url')
             file_name = attachment.get('title', 'file')
+            
+            # 检查是否是本地文件路径（file:// 开头或直接路径）
+            if download_url and download_url.startswith('file://'):
+                # 本地文件路径
+                local_path = download_url.replace('file://', '')
+                if os.path.exists(local_path):
+                    file_path = local_path
+                else:
+                    file_url = download_url
+            elif download_url and os.path.exists(download_url):
+                # 直接是本地路径
+                file_path = download_url
+            else:
+                # 远程 URL
+                file_url = download_url
     
     # 判断统一消息类型
-    if file_url:
+    if file_path or file_url:
         # 根据文件扩展名判断具体类型
+        actual_file = file_path or file_url
         if file_name.lower().endswith(('.mp4', '.mov', '.avi', '.mkv')):
             message_type = MessageType.VIDEO
         elif file_name.lower().endswith(('.jpg', '.jpeg', '.png', '.gif', '.webp')):
@@ -104,11 +120,14 @@ def parse_dingtalk_message(payload: Dict[str, Any]) -> UnifiedMessage:
         conversation_id=conversation_id,
         text=text_content,
         file_url=file_url,
+        file_path=file_path,  # 传递本地路径
         file_name=file_name,
         extra={
             'raw_payload': payload,
             'dingtalk_msg_type': msg_type,
-            'timestamp': timestamp
+            'timestamp': timestamp,
+            'file_path': file_path,  # extra 中也包含，供 video_input_handler 使用
+            'local_path': file_path
         }
     )
     
