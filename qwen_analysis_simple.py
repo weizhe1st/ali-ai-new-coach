@@ -14,7 +14,13 @@ from datetime import datetime
 from typing import Dict, Any, List
 
 # ==================== 配置 ====================
-DASHSCOPE_API_KEY = 'sk-88532d38dbe04d3a9b73c921ce25794c'
+DASHSCOPE_API_KEY = os.environ.get('DASHSCOPE_API_KEY')
+if not DASHSCOPE_API_KEY:
+    raise ValueError(
+        "DASHSCOPE_API_KEY environment variable is required. "
+        "Please set it before running this script."
+    )
+
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(PROJECT_ROOT, 'data', 'xiaolongxia_learning.db')
 API_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"

@@ -35,7 +35,7 @@ class AnalysisService:
     """
     
     def __init__(self):
-        self.analysis_entry = "qwen_vl_analysis"  # 当前使用的分析入口
+        self.analysis_entry = "legacy_adapter"  # 默认使用 legacy adapter
         print(f"✅ AnalysisService 已初始化 (entry={self.analysis_entry})")
     
     def analyze_video(self, task: UnifiedTask) -> Dict[str, Any]:
@@ -76,8 +76,10 @@ class AnalysisService:
         """
         调用旧分析能力
         
-        当前使用 Qwen-VL 进行视频分析
-        后续可替换为其他实现
+        通过 legacy adapter 调用现有分析能力
+        当前支持：
+        - complete_analysis_service (主要)
+        - qwen_vl_analysis (临时备用)
         
         Args:
             task: UnifiedTask 对象
@@ -86,13 +88,44 @@ class AnalysisService:
             dict: 旧分析模块返回结果
         """
         
-        # 当前实现：使用 Qwen-VL 进行分析
-        # 这里直接调用简化的分析逻辑
-        return self._analyze_with_qwen_vl(task)
+        # 优先使用 complete_analysis_service（主要旧分析能力）
+        try:
+            print(f"🔍 尝试调用 complete_analysis_service...")
+            from complete_analysis_service import analyze_video_complete
+            
+            result = analyze_video_complete(
+                video_path=task.source_file_path,
+                user_id=task.user_id,
+                task_id=task.task_id
+            )
+            
+            if result and result.get('success'):
+                print(f"✅ 使用 complete_analysis_service 成功")
+                return {
+                    'success': True,
+                    'analysis': result.get('analysis', {}),
+                    'entry': 'complete_analysis_service',
+                    'mp_metrics': result.get('mp_metrics'),
+                    'knowledge_results': result.get('knowledge_results')
+                }
+            else:
+                print(f"⚠️  complete_analysis_service 返回失败，尝试备用方案")
+                
+        except ImportError as e:
+            print(f"⚠️  complete_analysis_service 不可用：{e}")
+        except Exception as e:
+            print(f"⚠️  complete_analysis_service 调用失败：{e}")
+        
+        # 备用方案：使用临时 Qwen-VL 实现
+        # TODO: 后续应移除此临时实现，统一使用 legacy adapter
+        print(f"⚠️  使用临时 Qwen-VL 实现（应尽快替换为 legacy adapter）")
+        return self._analyze_with_qwen_vl_temp(task)
     
-    def _analyze_with_qwen_vl(self, task: UnifiedTask) -> Dict[str, Any]:
+    def _analyze_with_qwen_vl_temp(self, task: UnifiedTask) -> Dict[str, Any]:
         """
-        使用 Qwen-VL 进行视频分析（简化实现）
+        使用 Qwen-VL 进行视频分析（临时实现）
+        
+        ⚠️  这是临时备用方案，应尽快替换为 legacy adapter
         
         Args:
             task: UnifiedTask 对象
@@ -101,11 +134,17 @@ class AnalysisService:
             dict: 分析结果
         """
         
-        # 导入 Qwen API
+        # 从环境变量读取 API Key（不允许硬编码）
+        dashscope_api_key = os.environ.get('DASHSCOPE_API_KEY')
+        if not dashscope_api_key:
+            raise ValueError(
+                "DASHSCOPE_API_KEY environment variable is required. "
+                "Please set it before running analysis."
+            )
+        
         import base64
         import requests
         
-        DASHSCOPE_API_KEY = os.environ.get('DASHSCOPE_API_KEY', 'sk-88532d38dbe04d3a9b73c921ce25794c')
         API_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
         MODEL_NAME = "qwen-vl-max"
         
@@ -137,7 +176,7 @@ class AnalysisService:
         
         # 调用 API
         headers = {
-            "Authorization": f"Bearer {DASHSCOPE_API_KEY}",
+            "Authorization": f"Bearer {dashscope_api_key}",
             "Content-Type": "application/json"
         }
         
@@ -174,7 +213,7 @@ class AnalysisService:
         return {
             'success': True,
             'analysis': analysis,
-            'entry': 'qwen_vl'
+            'entry': 'qwen_vl_temp'
         }
     
     def _normalize_result(self, result: Dict[str, Any], task: UnifiedTask) -> Dict[str, Any]:
@@ -341,5 +380,6 @@ if __name__ == '__main__':
     print("="*60)
     print("✅ 基础测试通过")
     print("="*60 + "\n")
-    print("注意：完整视频分析测试需要配置 DASHSCOPE_API_KEY")
+    print("注意：完整视频分析测试需要配置 DASHSCOPE_API_KEY 环境变量")
     print("并准备真实视频文件。\n")
+    print("⚠️  临时 Qwen-VL 实现仅供备用，应优先使用 complete_analysis_service\n")

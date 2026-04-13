@@ -124,19 +124,31 @@ metrics = analyzer.analyze_video('video.mp4')
 
 ## 📊 技术架构
 
+### 当前架构（v2.0）
+
 ```
-钉钉用户 → OpenClaw Gateway → 视频保存
+钉钉用户 → OpenClaw Gateway → 视频保存到 media/inbound/
                                     ↓
-                          simple_integration.py
+                          simple_integration.py (监听)
                                     ↓
-                          ├─ MediaPipe 量化分析
-                          ├─ qwen-vl-max 视觉分析
+                          video_input_handler → source_file_path
+                                    ↓
+                          TaskExecutor → AnalysisService
+                                    ↓
+                          ├─ complete_analysis_service (主要)
+                          ├─ qwen_vl_temp (临时备用)
                           └─ 知识库对照
                                     ↓
-                          生成通俗化报告
-                                    ↓
-                          保存到 reports/
+                          生成通俗报告 → 保存 + 发送
 ```
+
+### 架构说明
+
+- **simple_integration.py**: 监听服务，检测新视频并触发分析流程
+- **video_input_handler**: 视频输入准备层，统一处理视频来源
+- **TaskExecutor**: 执行层，负责任务分发和状态管理
+- **AnalysisService**: 统一分析服务接入层，调用旧分析能力
+- **complete_analysis_service**: 主要分析内核（包含 MediaPipe + Qwen-VL + 知识库）
 
 ---
 
@@ -206,18 +218,16 @@ DB_PATH = '/home/admin/.openclaw/workspace/ai-coach/data/db/app.db'
 └─────────────────────────────────────┘
 ```
 
-### Task Execution Layer（执行层）
+### 执行层（TaskExecutor）
 
 **职责**:
 - 接收 UnifiedTask
 - 根据 task_type 分发执行
-- 调用旧分析能力
+- 调用 AnalysisService
 - 统一错误处理
 - 统一结果包装
-- **任务状态跟踪**
-- **任务日志记录**
 
-**关键类**:
+**关键方法**:
 ```python
 class TaskExecutor:
     def execute(task, message) -> dict:
@@ -226,77 +236,7 @@ class TaskExecutor:
             return _execute_video(task, message)
         elif task.task_type == "chat":
             return _execute_text(task, message)
-        # ...
 ```
-
-**统一返回结构**:
-```python
-{
-  "task_id": "uuid",
-  "task_type": "video_analysis",
-  "status": "success",           # created/running/success/failed
-  "current_stage": "completed",  # 当前执行阶段
-  "channel": "dingtalk",
-  "result": {...},
-  "report": "分析报告",
-  "error": None,
-  "started_at": "2026-04-09T...",
-  "completed_at": "2026-04-09T..."
-}
-```
-
----
-
-## Task Status and Logging（任务状态与日志）
-
-### 任务状态管理
-
-**UnifiedTask 状态字段**:
-- `status`: created → running → success/failed
-- `current_stage`: 当前执行阶段（如 executing_video, executing_text）
-- `error_code`: 错误码（失败时）
-- `error_message`: 错误信息（失败时）
-- `started_at`: 开始时间
-- `completed_at`: 完成时间
-
-**状态更新方法**:
-```python
-task.mark_running("executing_video")
-task.mark_success("completed", result=..., report=...)
-task.mark_failed("VIDEO_EXECUTION_ERROR", "错误信息", "executing_video")
-```
-
-### 任务日志记录
-
-**轻量日志模块**: `task_logger.py`
-
-**日志函数**:
-```python
-log_task_start(task, stage)
-log_task_success(task, stage)
-log_task_failure(task, error_code, error_message)
-log_video_execution_start(task)
-log_video_execution_success(task)
-log_video_execution_failure(task, code, msg)
-log_text_execution_start(task)
-log_text_execution_success(task)
-log_text_execution_failure(task, code, msg)
-```
-
-**日志输出**:
-```
-[2026-04-09T03:33:55.394] Task[4bc5b861] text_execution_started - Starting text task execution
-[2026-04-09T03:33:55.394] Task[4bc5b861] text_execution_succeeded - Text task completed successfully
-```
-
-### 当前实现说明
-
-- ✅ 已实现最小任务状态管理
-- ✅ 已实现轻量日志记录
-- ✅ TaskExecutor 是统一状态流转入口
-- ✅ 日志当前为简单打印，后续可升级为正式日志系统
-- ❌ 未引入数据库任务表
-- ❌ 未引入异步队列
 
 ---
 
@@ -307,7 +247,7 @@ log_text_execution_failure(task, code, msg)
 执行层不再直接调用旧分析脚本，而是通过统一分析服务接入层：
 
 ```
-TaskExecutor → AnalysisService → 旧分析能力（Qwen-VL 等）
+TaskExecutor → AnalysisService → 旧分析能力
 ```
 
 ### 核心模块
@@ -318,19 +258,20 @@ TaskExecutor → AnalysisService → 旧分析能力（Qwen-VL 等）
 ```python
 class AnalysisService:
     def analyze_video(task: UnifiedTask) -> dict:
-        # 校验输入（source_file_path）
-        # 调用旧分析能力
-        # 规范化返回结构
+        """
+        统一视频分析接口
+        
+        流程：
+        1. 校验输入（task.source_file_path）
+        2. 调用旧分析能力（_call_legacy_analysis）
+        3. 规范化返回结构（_normalize_result）
+        """
 ```
 
 ### 统一输入规范
 
 **唯一可信输入**:
 - `task.source_file_path` - 视频文件本地路径
-
-**可选辅助输入**:
-- `task.source_file_name` - 原始文件名
-- `task.source_file_url` - 原始 URL
 
 **强制要求**:
 - ❌ 不允许 fallback 到默认样例视频
@@ -342,27 +283,19 @@ class AnalysisService:
 {
   "success": True,
   "analysis_type": "video",
-  "entry": "qwen_vl",  # 使用的分析入口
+  "entry": "complete_analysis_service",  # 使用的分析入口
   "summary": "NTRP 3.0 级（置信度 85%），综合评分 68/100",
   "report": "🎾 网球发球分析报告\n...",
-  "structured_result": {
-    "ntrp_level": "3.0",
-    "confidence": 0.85,
-    "overall_score": 68,
-    "key_issues": [...],
-    "highlights": [...],
-    "training_priorities": [...]
-  },
+  "structured_result": {...},
   "detailed_analysis": {...},
   "coach_references": {...},
-  "raw_result": {...},  # 原始分析结果
-  "error": None,
-  "video_file": "/path/to/video.mp4",
-  "video_name": "video.mp4"
+  "raw_result": {...},
+  "error": None
 }
 ```
 
-**失败时**:
+### 错误处理
+
 ```python
 {
   "success": False,
@@ -374,31 +307,35 @@ class AnalysisService:
 }
 ```
 
-### 错误码
-
+**错误码**:
 - `VIDEO_SOURCE_PATH_MISSING` - 输入路径未设置
 - `VIDEO_SOURCE_PATH_NOT_FOUND` - 文件不存在
 - `VIDEO_ANALYSIS_FAILED` - 分析失败
 
-### 当前实现说明
+### Legacy Adapter（旧分析能力适配）
 
-- ✅ 统一分析服务接入层
-- ✅ 输入统一为 source_file_path
-- ✅ 输出统一为标准结构
-- ✅ 执行层不再耦合旧脚本
-- ✅ 明确失败，不回退到默认样例
-- ❌ 旧分析内核未重写（通过适配层调用）
+**当前支持**:
+- ✅ `complete_analysis_service` - 主要分析内核
+- ⚠️  `qwen_vl_temp` - 临时备用实现（应尽快移除）
 
----
+**调用流程**:
+```python
+AnalysisService._call_legacy_analysis(task)
+  ├─ 尝试 complete_analysis_service.analyze_video_complete()
+  └─ 备用：_analyze_with_qwen_vl_temp(task)  # 临时实现
+```
 
-## Video Input Preparation（视频输入准备）
+**注意**:
+- ✅ 优先使用 `complete_analysis_service`
+- ⚠️  `qwen_vl_temp` 是临时实现，标记为应移除
+- ❌ 执行层不直接调用任何分析内核
 
 ### 视频输入处理流程
 
 视频任务进入执行层后，先经过输入准备层：
 
 ```
-原始消息 → video_input_handler → 工作目录 → source_file_path → 旧分析能力
+原始消息 → video_input_handler → 工作目录 → source_file_path → AnalysisService
 ```
 
 ### 核心模块
@@ -427,8 +364,7 @@ data/tasks/{task_id}/
 1. ✅ `task.source_file_path` 已存在且文件存在
 2. ✅ `message.file_path` 存在
 3. ✅ `message.extra` 中有路径信息
-4. ⚠️ `message.file_url` 存在（当前不支持，明确失败）
-5. ❌ 无输入（明确失败，**不允许 fallback 到默认样例**）
+4. ❌ 无输入（明确失败，**不允许 fallback 到默认样例**）
 
 ### 错误处理
 
@@ -437,64 +373,12 @@ data/tasks/{task_id}/
 task.mark_failed("VIDEO_INPUT_MISSING", "...", "preparing_video_input")
 ```
 
-**URL 不支持**:
-```python
-task.mark_failed("VIDEO_URL_NOT_SUPPORTED", "...", "preparing_video_input")
-```
-
-**文件复制失败**:
-```python
-task.mark_failed("VIDEO_FILE_COPY_FAILED", "...", "preparing_video_input")
-```
-
-### 状态流转
-
-```
-created → preparing_video_input → executing_video → success/failed
-```
-
-### 日志记录
-
-```
-[timestamp] Task[task_id] workdir_created - Task workdir created at ...
-[timestamp] Task[task_id] video_file_copied - Video file copied from ... to ...
-[timestamp] Task[task_id] video_input_prepared - Video input prepared at ...
-```
-
-### 当前实现说明
-
-- ✅ 统一解析视频输入来源
-- ✅ 统一生成任务工作目录
-- ✅ 统一写入 source_file_path
-- ✅ 明确失败，不回退到默认样例
-- ❌ 未实现 URL 下载器（后续可扩展）
-- ❌ 未实现对象存储集成
-
 ### 各层职责
 
-**接入层**:
-- 接收渠道原始消息（钉钉/QQ）
-- 转换为 UnifiedMessage
-- 不处理业务逻辑
-
-**路由层**:
-- 接收 UnifiedMessage
-- 创建 UnifiedTask
-- 交给 TaskExecutor 执行
-- 不直接执行业务
-
-**执行层**:
-- 接收 UnifiedTask
-- 根据 task_type 执行
-- 调用旧分析能力
-- 统一错误处理
-- 统一结果包装
-
-**分析层**:
-- 视频分析核心逻辑
-- MediaPipe 姿态分析
-- 报告生成
-- 知识库处理
+**接入层**: 接收渠道原始消息 → 转换为 UnifiedMessage  
+**路由层**: 接收 UnifiedMessage → 创建 UnifiedTask → 交给 TaskExecutor  
+**执行层**: 接收 UnifiedTask → 调用 AnalysisService → 统一错误处理  
+**分析层**: AnalysisService → 旧分析能力 → 规范化结果
 
 ### 渠道接入说明
 
@@ -543,40 +427,54 @@ created → preparing_video_input → executing_video → success/failed
 3. 等待 1-2 分钟
 4. 收到 AI 分析报告
 
-### 代码示例
+### 代码流程示例
 
 ```python
-from router import MessageRouter, from_dingtalk
+# 1. 渠道消息 → 适配器 → UnifiedMessage
+from adapters.dingtalk_adapter import parse_dingtalk_message
 
-# 创建路由器（内部包含 TaskExecutor）
+message = parse_dingtalk_message(raw_message)
+
+# 2. UnifiedMessage → Router → UnifiedTask
+from router import MessageRouter
+
 router = MessageRouter()
+task = router.create_task(message, task_type='video_analysis')
 
-# 注册视频分析处理器（连接到旧分析能力）
-def my_video_handler(task):
-    # 调用旧分析能力
-    from complete_analysis_service import analyze_video_complete
-    return analyze_video_complete(task.video_path)
+# 3. UnifiedTask → TaskExecutor → AnalysisService
+from task_executor import TaskExecutor
 
-router.register_video_handler(my_video_handler)
+executor = TaskExecutor()
+result = executor.execute(task, message)
 
-# 接收钉钉消息
-message = from_dingtalk(
-    user_id='user_123',
-    text='帮我分析这个发球',
-    file_path='/path/to/video.mp4'
-)
-
-# 路由处理
-# MessageRouter -> TaskExecutor -> 旧分析能力
-result = router.route_message(message)
-
-# 获取统一结果
-print(f"任务状态：{result['status']}")
-print(f"任务 ID: {result['task_id']}")
-print(f"分析报告：{result['report']}")
+# 4. AnalysisService → 旧分析能力 → 规范化结果
+# 内部流程：
+#   AnalysisService.analyze_video(task)
+#     → _call_legacy_analysis(task)
+#       → complete_analysis_service.analyze_video_complete()
+#     → _normalize_result(result)
 ```
 
-**返回结果结构**:
+**完整数据流**:
+```
+钉钉消息 → 适配器 → UnifiedMessage
+                      ↓
+              router.py (创建 UnifiedTask)
+                      ↓
+              task_executor.py (TaskExecutor)
+                      ↓
+              analysis_service.py (AnalysisService)
+                      ↓
+              complete_analysis_service.py (旧分析能力)
+                      ↓
+              规范化结果 → 返回给执行层
+```
+
+**注意**:
+- ❌ 不使用 `task.video_path`（已废弃）
+- ✅ 使用 `task.source_file_path`（标准字段）
+- ❌ 不调用 `router.register_video_handler()`（已废弃）
+- ✅ 使用 `TaskExecutor.execute()` 统一执行
 ```python
 {
   "task_id": "uuid",

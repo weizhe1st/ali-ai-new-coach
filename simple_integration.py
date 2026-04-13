@@ -14,7 +14,13 @@ from datetime import datetime
 
 # 配置
 VIDEO_INPUT_DIR = '/home/admin/.openclaw/workspace/media/inbound'
-DASHSCOPE_API_KEY = 'sk-88532d38dbe04d3a9b73c921ce25794c'
+DASHSCOPE_API_KEY = os.environ.get('DASHSCOPE_API_KEY')
+if not DASHSCOPE_API_KEY:
+    print("⚠️  警告：DASHSCOPE_API_KEY 环境变量未设置")
+    print("   请设置：export DASHSCOPE_API_KEY=sk-your-key")
+    print("   或创建 .env 文件（参考 .env.example）")
+    sys.exit(1)
+
 API_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
 MODEL_NAME = "qwen-vl-max"
 
