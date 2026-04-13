@@ -115,16 +115,17 @@ def parse_dingtalk_message(payload: Dict[str, Any]) -> UnifiedMessage:
     return message
 
 
-def handle_dingtalk_payload(payload: Dict[str, Any], router) -> Dict[str, Any]:
+def handle_dingtalk_payload(payload: Dict[str, Any], router, reply_builder=None) -> Dict[str, Any]:
     """
     处理钉钉原始消息 payload
     
     Args:
         payload: 钉钉原始消息 payload
         router: MessageRouter 实例
+        reply_builder: ReplyBuilder 实例（可选，默认创建新实例）
     
     Returns:
-        dict: 统一返回结果
+        dict: 统一返回结果（包含渠道输出格式）
     """
     
     # 解析为统一消息
@@ -133,9 +134,14 @@ def handle_dingtalk_payload(payload: Dict[str, Any], router) -> Dict[str, Any]:
     # 通过路由器处理
     task = router.route_message(message)
     
-    # 返回统一结果
+    # 使用统一回复构建器
+    if reply_builder is None:
+        from reply_builder import ReplyBuilder
+        reply_builder = ReplyBuilder()
+    
+    # 构建执行结果（TaskExecutor 格式）
     if task:
-        return {
+        execution_result = {
             'task_id': task.task_id,
             'task_type': task.task_type,
             'status': task.status,
@@ -143,15 +149,45 @@ def handle_dingtalk_payload(payload: Dict[str, Any], router) -> Dict[str, Any]:
             'message_type': message.message_type.value,
             'result': task.result,
             'report': task.report,
-            'error_message': task.error_message
+            'error_code': task.error_code,
+            'error_message': task.error_message,
+            'current_stage': task.current_stage
+        }
+        
+        # 通过 ReplyBuilder 构建统一回复
+        reply = reply_builder.build_reply(execution_result)
+        
+        # 渲染为钉钉渠道格式
+        channel_output = reply_builder.render_reply_for_channel(reply, 'dingtalk')
+        
+        return {
+            'success': True,
+            'channel': 'dingtalk',
+            'output': channel_output,
+            'reply_object': reply,
+            'task_id': task.task_id
         }
     else:
-        return {
+        # Router 返回 None 的错误情况
+        error_result = {
             'task_id': None,
             'task_type': 'unknown',
             'status': 'failed',
             'channel': 'dingtalk',
-            'error_message': 'Router returned None'
+            'error_code': 'ROUTER_RETURNED_NONE',
+            'error_message': 'Router returned None',
+            'current_stage': 'routing'
+        }
+        
+        reply = reply_builder.build_reply(error_result)
+        channel_output = reply_builder.render_reply_for_channel(reply, 'dingtalk')
+        
+        return {
+            'success': False,
+            'channel': 'dingtalk',
+            'output': channel_output,
+            'reply_object': reply,
+            'task_id': None
         }
 
 

@@ -139,7 +139,9 @@ metrics = analyzer.analyze_video('video.mp4')
                           ├─ qwen_vl_temp (临时备用)
                           └─ 知识库对照
                                     ↓
-                          生成通俗报告 → 保存 + 发送
+                          ReplyBuilder → 统一回复格式
+                                    ↓
+                          钉钉/QQ 渠道输出
 ```
 
 ### 架构说明
@@ -149,6 +151,7 @@ metrics = analyzer.analyze_video('video.mp4')
 - **TaskExecutor**: 执行层，负责任务分发和状态管理
 - **AnalysisService**: 统一分析服务接入层，调用旧分析能力
 - **complete_analysis_service**: 主要分析内核（包含 MediaPipe + Qwen-VL + 知识库）
+- **ReplyBuilder**: 统一回复构建层，将执行结果转换为用户可见回复
 
 ---
 
@@ -378,7 +381,121 @@ task.mark_failed("VIDEO_INPUT_MISSING", "...", "preparing_video_input")
 **接入层**: 接收渠道原始消息 → 转换为 UnifiedMessage  
 **路由层**: 接收 UnifiedMessage → 创建 UnifiedTask → 交给 TaskExecutor  
 **执行层**: 接收 UnifiedTask → 调用 AnalysisService → 统一错误处理  
-**分析层**: AnalysisService → 旧分析能力 → 规范化结果
+**分析层**: AnalysisService → 旧分析能力 → 规范化结果  
+**回复层**: ReplyBuilder → 将执行结果转换为用户可见回复
+
+---
+
+## Reply Builder Layer（统一回复构建层）
+
+### 设计目标
+
+当前系统存在一个问题：钉钉和 QQ 适配器各自拼装回复内容，导致：
+- 同一份分析结果，不同渠道展示不一致
+- 失败提示不一致
+- 没有统一的输出规范
+
+Reply Builder Layer 解决这个问题：
+- **统一回复格式**：所有渠道使用相同的回复结构
+- **内容与格式分离**：执行结果和用户可见回复分开
+- **渠道适配最小化**：渠道层只做薄格式转换，不改内容逻辑
+
+### 核心模块
+
+**文件**: `reply_builder.py`
+
+**关键类**:
+```python
+class ReplyBuilder:
+    def build_reply(execution_result: dict) -> dict:
+        """将 TaskExecutor 执行结果转换为统一回复对象"""
+    
+    def render_reply_as_text(reply: dict) -> str:
+        """将统一回复对象渲染为纯文本"""
+    
+    def render_reply_for_channel(reply: dict, channel: str) -> dict:
+        """为特定渠道渲染回复格式"""
+```
+
+### 统一回复对象结构
+
+**成功回复**:
+```python
+{
+    "success": True,
+    "reply_type": "analysis_report",  # 或 "text", "error"
+    "title": "🎾 发球分析已完成",
+    "message": "NTRP 3.5 级，综合评分 72/100",
+    "details": ["关键问题 1", "关键问题 2", "建议 1"],
+    "task_id": "uuid",
+    "channel": "dingtalk",
+    "raw_result": {...}  # 保留原始执行结果供调试
+}
+```
+
+**失败回复**:
+```python
+{
+    "success": False,
+    "reply_type": "error",
+    "title": "❌ 任务执行失败",
+    "message": "本次任务未成功完成，请检查输入或稍后重试。",
+    "details": ["错误码：VIDEO_INPUT_MISSING", "错误信息：..."],
+    "task_id": "uuid"
+}
+```
+
+### 渠道接入流程
+
+```
+TaskExecutor Result
+        ↓
+  ReplyBuilder.build_reply()
+        ↓
+  统一回复对象
+        ↓
+  ReplyBuilder.render_reply_for_channel()
+        ↓
+  渠道输出格式（钉钉/QQ）
+```
+
+### 当前实现
+
+- ✅ 统一文本任务回复格式
+- ✅ 统一视频分析任务回复格式
+- ✅ 统一失败回复格式
+- ✅ 纯文本渲染器
+- ✅ 钉钉适配器已接入
+- ✅ QQ 适配器已接入
+
+### 后续扩展
+
+- 富文本/Markdown 渲染
+- 卡片消息支持
+- 网页端/API 输出
+- 多语言文案系统
+
+---
+
+### 渠道接入说明
+
+当前系统支持以下渠道：
+
+1. **钉钉（主入口）**
+   - 适配器：`adapters/dingtalk_adapter.py`
+   - 状态：✅ 已接入 ReplyBuilder
+   - 输出格式：纯文本
+
+2. **QQ（辅入口）**
+   - 适配器：`adapters/qq_adapter.py`
+   - 状态：✅ 已接入 ReplyBuilder
+   - 输出格式：纯文本
+
+**渠道适配器职责**:
+- 只负责解析原始消息
+- 转换为统一消息格式
+- 调用统一回复层生成回复
+- 不直接拼装复杂文案
 
 ### 渠道接入说明
 
