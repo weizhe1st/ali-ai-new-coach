@@ -7,7 +7,12 @@
 """
 
 from dataclasses import dataclass, field
-from typing import Optional, Literal, Dict, Any
+try:
+    from typing import Optional, Literal, Dict, Any
+except ImportError:
+    # Python 3.6.8 不支持 Literal，使用 typing_extensions
+    from typing import Optional, Dict, Any
+    from typing_extensions import Literal
 from datetime import datetime
 import uuid
 

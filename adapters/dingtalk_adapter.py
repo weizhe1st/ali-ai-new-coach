@@ -131,28 +131,22 @@ def handle_dingtalk_payload(payload: Dict[str, Any], router, reply_builder=None)
     # 解析为统一消息
     message = parse_dingtalk_message(payload)
     
-    # 通过路由器处理
-    task = router.route_message(message)
+    # 通过路由器处理（返回 execution_result dict）
+    execution_result = router.route_message(message)
     
     # 使用统一回复构建器
     if reply_builder is None:
         from reply_builder import ReplyBuilder
         reply_builder = ReplyBuilder()
     
-    # 构建执行结果（TaskExecutor 格式）
-    if task:
-        execution_result = {
-            'task_id': task.task_id,
-            'task_type': task.task_type,
-            'status': task.status,
-            'channel': 'dingtalk',
-            'message_type': message.message_type.value,
-            'result': task.result,
-            'report': task.report,
-            'error_code': task.error_code,
-            'error_message': task.error_message,
-            'current_stage': task.current_stage
-        }
+    # execution_result 已经是 TaskExecutor 返回的 dict 格式
+    # 直接交给 ReplyBuilder 处理
+    if execution_result:
+        # 确保 execution_result 包含必要字段
+        if 'task_id' not in execution_result:
+            execution_result['task_id'] = None
+        if 'channel' not in execution_result:
+            execution_result['channel'] = 'dingtalk'
         
         # 通过 ReplyBuilder 构建统一回复
         reply = reply_builder.build_reply(execution_result)
@@ -161,11 +155,11 @@ def handle_dingtalk_payload(payload: Dict[str, Any], router, reply_builder=None)
         channel_output = reply_builder.render_reply_for_channel(reply, 'dingtalk')
         
         return {
-            'success': True,
+            'success': execution_result.get('status') == 'success',
             'channel': 'dingtalk',
             'output': channel_output,
             'reply_object': reply,
-            'task_id': task.task_id
+            'task_id': execution_result.get('task_id')
         }
     else:
         # Router 返回 None 的错误情况

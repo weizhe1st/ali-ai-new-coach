@@ -6,7 +6,12 @@
 """
 
 from dataclasses import dataclass, field
-from typing import Optional, Literal, Dict, Any, Union
+try:
+    from typing import Optional, Literal, Dict, Any, Union
+except ImportError:
+    # Python 3.6.8 不支持 Literal，使用 typing_extensions
+    from typing import Optional, Dict, Any, Union
+    from typing_extensions import Literal
 from datetime import datetime
 from enum import Enum
 
