@@ -155,28 +155,154 @@ metrics = analyzer.analyze_video('video.mp4')
 
 ---
 
-## 🔧 配置说明
+## Configuration and Environment（配置与环境）
 
-### 模型配置
+### 统一配置层
 
-编辑 `core.py`:
-```python
-MODEL_NAME = 'qwen-max'  # 文本分析
-# 或
-MODEL_NAME = 'qwen-vl-max'  # 视频分析
-```
+当前系统已引入统一配置层（`config.py`），集中管理：
+- 模型配置（DashScope/Qwen）
+- 渠道配置（钉钉/QQ）
+- 路径配置（数据/日志/临时目录）
+- 运行模式配置（dev/prod）
 
-### API Key 配置
+所有配置统一从环境变量读取，不再散落在各个文件中。
+
+### 环境变量配置
+
+**1. 复制配置模板**
 
 ```bash
-export DASHSCOPE_API_KEY="sk-xxxxxxxxxxxxxxxx"
+cd /home/admin/.openclaw/workspace/ai-coach
+cp .env.example .env
 ```
 
-### 数据库配置
+**2. 编辑 .env 文件**
+
+```bash
+# 模型配置
+DASHSCOPE_API_KEY=sk-your-api-key-here
+VIDEO_MODEL_NAME=qwen-vl-max
+TEXT_MODEL_NAME=qwen-max
+ANALYSIS_BACKEND=legacy
+
+# 运行模式
+APP_ENV=dev  # 或 prod
+DEBUG=true
+
+# 路径配置（使用默认值即可）
+BASE_DATA_DIR=./data
+TASK_DATA_DIR=./data/tasks
+LOG_DIR=./logs
+```
+
+**3. 加载环境变量**
+
+```bash
+# 方式 1：使用 direnv（推荐）
+direnv allow
+
+# 方式 2：手动导出
+export $(cat .env | xargs)
+
+# 方式 3：Python 自动加载（config 模块会自动读取）
+```
+
+### 配置字段说明
+
+#### 模型配置
+
+| 变量名 | 说明 | 默认值 |
+|--------|------|--------|
+| `DASHSCOPE_API_KEY` | 阿里云 DashScope API Key（必需） | - |
+| `VIDEO_MODEL_NAME` | 视频分析模型 | `qwen-vl-max` |
+| `TEXT_MODEL_NAME` | 文本处理模型 | `qwen-max` |
+| `ANALYSIS_BACKEND` | 分析后端（legacy/simple/qwen_vl） | `legacy` |
+| `ENABLE_TEMP_QWEN_FALLBACK` | 允许临时 fallback | `false` |
+
+#### 渠道配置
+
+| 变量名 | 说明 | 默认值 |
+|--------|------|--------|
+| `DINGTALK_ENABLED` | 启用钉钉渠道 | `true` |
+| `DINGTALK_APP_KEY` | 钉钉 App Key | - |
+| `DINGTALK_APP_SECRET` | 钉钉 App Secret | - |
+| `DINGTALK_AGENT_ID` | 钉钉 Agent ID | - |
+| `QQ_ENABLED` | 启用 QQ 渠道 | `true` |
+| `QQ_APP_ID` | QQ App ID | - |
+
+#### 路径配置
+
+| 变量名 | 说明 | 默认值 |
+|--------|------|--------|
+| `BASE_DATA_DIR` | 基础数据目录 | `./data` |
+| `TASK_DATA_DIR` | 任务工作目录 | `./data/tasks` |
+| `LOG_DIR` | 日志目录 | `./logs` |
+| `TEMP_DIR` | 临时目录 | `./tmp` |
+| `DB_PATH` | 数据库路径 | `./data/db/app.db` |
+
+#### 运行模式配置
+
+| 变量名 | 说明 | 默认值 |
+|--------|------|--------|
+| `APP_ENV` | 运行环境（dev/prod） | `dev` |
+| `DEBUG` | 调试模式 | `true`（dev）/`false`（prod） |
+| `VERBOSE_TASK_LOGGING` | 详细任务日志 | `true` |
+| `MAX_VIDEO_SIZE_MB` | 最大视频大小（MB） | `50` |
+| `VIDEO_ANALYSIS_TIMEOUT` | 分析超时时间（秒） | `120` |
+
+### 开发/生产模式
+
+**开发模式**（`APP_ENV=dev`）:
+- ✅ 启用详细日志
+- ✅ 启用调试模式
+- ✅ 自动创建目录
+- ⚠️  不适合高并发
+
+**生产模式**（`APP_ENV=prod`）:
+- ✅ 精简日志
+- ✅ 关闭调试模式
+- ✅ 优化性能
+- ⚠️  需要正确配置所有环境变量
+
+### 敏感配置安全
+
+**重要**:
+- ⚠️  `.env` 文件已在 `.gitignore` 中，不会提交到 Git
+- ✅ 使用 `.env.example` 作为模板，不含真实密钥
+- ✅ 所有敏感配置统一从环境变量读取
+- ✅ 代码中不再硬编码 API Key 或密钥
+
+### 配置模块使用
+
+**在代码中使用配置**:
 
 ```python
-DB_PATH = '/home/admin/.openclaw/workspace/ai-coach/data/db/app.db'
+from config import get_config, get_model_config
+
+# 获取总配置
+config = get_config()
+print(config.model.video_model_name)
+
+# 获取模型配置
+model_config = get_model_config()
+print(model_config.dashscope_api_key)
+
+# 获取路径配置
+path_config = get_path_config()
+print(path_config.task_data_dir)
 ```
+
+### 旧配置方式（已废弃）
+
+以下配置方式已不再使用：
+- ❌ 在 `core.py` 中硬编码 `MODEL_NAME`
+- ❌ 在各文件中直接 `os.environ.get('DASHSCOPE_API_KEY')`
+- ❌ 在代码中写死绝对路径
+
+应改为：
+- ✅ 使用 `config.py` 统一配置模块
+- ✅ 通过 `.env` 文件管理环境变量
+- ✅ 使用相对路径（config 会自动转换为绝对路径）
 
 ---
 

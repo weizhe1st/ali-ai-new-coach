@@ -134,19 +134,22 @@ class AnalysisService:
             dict: 分析结果
         """
         
-        # 从环境变量读取 API Key（不允许硬编码）
-        dashscope_api_key = os.environ.get('DASHSCOPE_API_KEY')
+        # 从统一配置模块获取配置
+        from config import get_model_config
+        model_config = get_model_config()
+        
+        dashscope_api_key = model_config.dashscope_api_key
         if not dashscope_api_key:
             raise ValueError(
-                "DASHSCOPE_API_KEY environment variable is required. "
-                "Please set it before running analysis."
+                "DASHSCOPE_API_KEY is required. "
+                "Please set DASHSCOPE_API_KEY environment variable."
             )
         
         import base64
         import requests
         
         API_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
-        MODEL_NAME = "qwen-vl-max"
+        MODEL_NAME = model_config.video_model_name
         
         # 读取视频文件
         with open(task.source_file_path, 'rb') as f:
