@@ -893,4 +893,109 @@ git push origin feature/new-feature
 
 ---
 
+## System Readiness（系统状态）
+
+### 当前版本状态：**可小范围内部试运行**
+
+**版本**: v2.0  
+**验收日期**: 2026-04-13  
+**主链路状态**: ✅ 已完成
+
+### 已完成能力
+
+**核心架构**:
+- ✅ 统一消息结构（UnifiedMessage）
+- ✅ 统一任务结构（UnifiedTask）
+- ✅ 统一路由层（MessageRouter）
+- ✅ 统一执行层（TaskExecutor）
+- ✅ 统一视频输入层（VideoInputHandler）
+- ✅ 统一分析服务层（AnalysisService）
+- ✅ 统一回复构建层（ReplyBuilder）
+- ✅ 统一配置管理层（config.py）
+
+**渠道支持**:
+- ✅ 钉钉适配器（已接入 ReplyBuilder）
+- ✅ QQ 适配器（已接入 ReplyBuilder）
+
+**配置管理**:
+- ✅ 模型配置统一管理
+- ✅ 渠道配置统一管理
+- ✅ 路径配置统一管理
+- ✅ 运行模式（dev/prod）配置
+
+### 当前主链路
+
+```
+钉钉/QQ 消息
+  → Adapter (parse_xxx_message)
+  → UnifiedMessage
+  → MessageRouter.route_message()
+  → TaskExecutor.execute()
+  → VideoInputHandler (视频任务)
+  → AnalysisService
+  → ReplyBuilder.build_reply()
+  → 渠道输出
+```
+
+### 上线前风险
+
+**高风险**（必须处理）:
+- ⚠️  真实渠道回调未联调 - 需测试钉钉/QQ 真实 webhook
+- ⚠️  生产环境配置缺失 - 需准备生产环境变量清单
+- ⚠️  临时 fallback 仍存在 - `_analyze_with_qwen_vl_temp` 应尽快移除
+
+**中风险**（建议处理）:
+- ⚠️  Legacy 文件未清理 - 存在多个历史分析脚本
+- ⚠️  日志系统不完善 - 当前为简单打印
+- ⚠️  数据库未初始化脚本 - 需手动创建
+
+**低风险**（可后续优化）:
+- ℹ️  无前端页面 - 仅支持钉钉/QQ
+- ℹ️  无任务队列 - 同步处理
+- ℹ️  无多用户支持 - 用户系统简单
+
+### 适用范围
+
+**✅ 可用于**:
+- 开发环境联调测试
+- 小范围内部试运行（需人工监控）
+- 功能验证和测试
+
+**❌ 暂不建议**:
+- 大规模正式上线
+- 生产环境高并发场景
+- 无人值守运行
+
+### 下一步计划
+
+**短期**（1-2 周）:
+1. 真实渠道联调 - 测试钉钉/QQ 真实 webhook
+2. 生产配置清单 - 准备生产环境变量文档
+3. Legacy 文件标记 - 明确主入口，标记旧文件
+
+**中期**（1 个月）:
+1. 异步队列 - 引入任务队列支持并发
+2. 日志系统 - 引入正式日志系统
+3. 数据库初始化 - 添加初始化脚本
+
+**长期**（3 个月+）:
+1. Web 前端 - 开发 Web 界面
+2. 多用户支持 - 完善用户系统
+3. 历史对比 - 添加用户进步曲线
+
+### 验收测试
+
+运行验收测试：
+```bash
+cd /home/admin/.openclaw/workspace/ai-coach
+python3 test_acceptance_flow.py
+```
+
+**验收文档**:
+- `ACCEPTANCE_CHECKLIST.md` - 验收清单
+- `LEGACY_FILES_STATUS.md` - Legacy 文件状态
+- `test_acceptance_flow.py` - 验收测试脚本
+
+---
+
 **🎾 享受网球，享受 AI 带来的便利！**
