@@ -59,10 +59,11 @@ config.local.json
 *.private.json
 dingtalk_config.json
 
-# 数据库
+# 数据库（本地运行数据，不提交到 Git）
 *.sqlite3
 *.db
-!data/db/app.db
+data/db/*.db
+!data/db/.gitkeep
 
 # 日志目录
 logs/

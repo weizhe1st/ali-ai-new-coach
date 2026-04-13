@@ -50,27 +50,57 @@ openclaw gateway status
 ```
 ai-coach/
 ├── models/                    # 数据模型
-│   ├── message.py             # 统一消息结构
-│   └── task.py                # 统一任务结构
+│   ├── message.py             # 统一消息结构 ✅
+│   └── task.py                # 统一任务结构 ✅
 ├── adapters/                  # 渠道适配器
-│   ├── dingtalk_adapter.py    # 钉钉适配器
-│   └── qq_adapter.py          # QQ 适配器
-├── router.py                  # 路由层
-├── task_executor.py           # 执行层
+│   ├── dingtalk_adapter.py    # 钉钉适配器 ✅ 已接入配置层
+│   └── qq_adapter.py          # QQ 适配器 ✅ 已接入配置层
+├── router.py                  # 路由层 ✅
+├── task_executor.py           # 执行层 ✅
+├── reply_builder.py           # 回复构建层 ✅
+├── config.py                  # 统一配置层 ✅
 ├── 核心模块
-│   ├── core.py                # 核心配置
-│   ├── complete_analysis_service.py  # 主分析服务
-│   └── complete_report_generator.py  # 报告生成器
+│   ├── core.py                # 核心配置 ⚠️ legacy（保留用于向后兼容）
+│   ├── complete_analysis_service.py  # 主分析服务 ✅ 主要分析内核
+│   └── complete_report_generator.py  # 报告生成器 ✅
+├── analysis_service.py        # 分析服务接入层 ✅ 已接入配置层
+├── video_input_handler.py     # 视频输入处理 ✅
 ├── 知识库
-│   └── fused_knowledge/       # 169 条融合知识
-├── data/db/                   # 数据库
-│   └── app.db                 # 含黄金标准表
-├── reports/                   # 分析报告
-├── media/inbound/             # 输入视频（临时）
+│   └── fused_knowledge/       # 169 条融合知识 ✅
+├── data/db/                   # 数据库（本地运行，不提交到 Git）
+│   └── app.db                 # 本地数据库（.gitignore）
+├── reports/                   # 分析报告（不提交到 Git）
+├── media/inbound/             # 输入视频（临时，不提交到 Git）
+├── logs/                      # 日志目录（不提交到 Git）
+├── tmp/                       # 临时目录（不提交到 Git）
 ├── .gitignore
+├── .env.example               # 环境变量模板
 ├── requirements.txt
 └── README.md
 ```
+
+### 模块状态说明
+
+**✅ 已接入统一配置层**（主链路）:
+- `config.py` - 统一配置模块（核心）
+- `analysis_service.py` - 分析服务接入层（从 config 读取模型配置）
+- `video_input_handler.py` - 视频输入处理（从 config 读取路径配置）
+- `adapters/dingtalk_adapter.py` - 钉钉适配器（通过 ReplyBuilder 间接使用）
+- `adapters/qq_adapter.py` - QQ 适配器（通过 ReplyBuilder 间接使用）
+- `reply_builder.py` - 回复构建层
+- `task_executor.py` - 执行层（通过 AnalysisService 间接使用）
+
+**⚠️ Legacy / Compatibility**（保留用于向后兼容）:
+- `core.py` - 旧配置模块（仍被 complete_analysis_service 引用）
+- `complete_analysis_service.py` - 主要分析内核（通过 core.py 间接读取配置）
+- `qwen_analysis_service.py` - 独立分析脚本（不推荐直接使用）
+- `qwen_analysis_simple.py` - 简化分析脚本（不推荐直接使用）
+- `simple_integration.py` - 监听脚本（临时使用，直接从环境变量读取）
+
+**📝 未来计划**:
+- 将 `core.py` 的配置迁移到 `config.py`
+- 统一所有 legacy 脚本使用配置层
+- 移除 `simple_integration.py` 中的直接环境变量读取
 
 ---
 

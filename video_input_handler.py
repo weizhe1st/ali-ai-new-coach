@@ -24,10 +24,12 @@ sys.path.insert(0, PROJECT_ROOT)
 
 from models.task import UnifiedTask
 from models.message import UnifiedMessage
+from config import get_path_config
 
 
-# 任务工作目录根路径
-TASK_WORKDIR_ROOT = os.path.join(PROJECT_ROOT, 'data', 'tasks')
+# 任务工作目录根路径（从配置层读取）
+_path_config = get_path_config()
+TASK_WORKDIR_ROOT = _path_config.task_data_dir
 
 
 def build_task_workdir(task: UnifiedTask) -> str:
