@@ -53,7 +53,18 @@ if MODEL_PROVIDER == 'qwen':
 else:
     _api_key = MOONSHOT_API_KEY
     _base_url = "https://api.moonshot.cn/v1"
-client = OpenAI(api_key=_api_key, base_url=_base_url)
+client = None  # 延迟初始化，避免导入时失败
+
+def get_client():
+    """获取 OpenAI 客户端（延迟初始化）"""
+    global client
+    if client is None:
+        try:
+            client = OpenAI(api_key=_api_key, base_url=_base_url)
+        except Exception as e:
+            print(f"⚠️  OpenAI 客户端初始化失败：{e}")
+            client = None
+    return client
 
 # ═══════════════════════════════════════════════════════════════════
 # 数据库操作函数

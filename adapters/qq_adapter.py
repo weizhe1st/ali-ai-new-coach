@@ -114,6 +114,14 @@ def parse_qq_message(payload: Dict[str, Any]) -> UnifiedMessage:
     else:
         message_type = MessageType.UNKNOWN
     
+    # 解析 file:// URL 为本地路径
+    file_path = None
+    if file_url:
+        if file_url.startswith('file://'):
+            file_path = file_url[7:]  # 移除 file:// 前缀
+        elif os.path.exists(file_url):
+            file_path = file_url
+    
     # 创建统一消息对象
     message = UnifiedMessage(
         channel=ChannelType.QQ,
@@ -124,6 +132,7 @@ def parse_qq_message(payload: Dict[str, Any]) -> UnifiedMessage:
         text=text_content,
         file_url=file_url,
         file_name=file_name,
+        file_path=file_path,
         extra={
             'raw_payload': payload,
             'qq_msg_type': message_type_raw,

@@ -90,6 +90,45 @@ class ChannelConfig:
 
 
 @dataclass
+class COSConfig:
+    """腾讯云 COS 配置"""
+    # COS 基础配置
+    enabled: bool = True
+    secret_id: str = ""
+    secret_key: str = ""
+    bucket: str = ""
+    region: str = ""
+    
+    # 存储路径前缀
+    raw_prefix: str = "raw/"  # 原始视频前缀
+    analyzed_prefix: str = "analyzed/"  # 分析后视频前缀
+    golden_prefix: str = "golden/"  # 黄金样本前缀
+    candidate_prefix: str = "candidate_golden/"  # 候选样本前缀
+    
+    # 当前年月前缀（自动计算）
+    current_month_prefix: str = ""
+    
+    @classmethod
+    def from_env(cls) -> 'COSConfig':
+        """从环境变量加载配置"""
+        from datetime import datetime
+        current_month = datetime.now().strftime('%Y/%m')
+        
+        return cls(
+            enabled=os.environ.get('COS_ENABLED', 'true').lower() in ('true', '1', 'yes'),
+            secret_id=os.environ.get('COS_SECRET_ID', ''),
+            secret_key=os.environ.get('COS_SECRET_KEY', ''),
+            bucket=os.environ.get('COS_BUCKET', ''),
+            region=os.environ.get('COS_REGION', ''),
+            raw_prefix=os.environ.get('COS_RAW_PREFIX', 'raw/'),
+            analyzed_prefix=os.environ.get('COS_ANALYZED_PREFIX', 'analyzed/'),
+            golden_prefix=os.environ.get('COS_GOLDEN_PREFIX', 'golden/'),
+            candidate_prefix=os.environ.get('COS_CANDIDATE_PREFIX', 'candidate_golden/'),
+            current_month_prefix=current_month
+        )
+
+
+@dataclass
 class PathConfig:
     """路径配置"""
     # 基础路径
@@ -186,6 +225,7 @@ class AppConfig:
     channel: ChannelConfig
     paths: PathConfig
     runtime: RuntimeConfig
+    cos: COSConfig
     
     @classmethod
     def load(cls) -> 'AppConfig':
@@ -194,7 +234,8 @@ class AppConfig:
             model=ModelConfig.from_env(),
             channel=ChannelConfig.from_env(),
             paths=PathConfig.from_env(),
-            runtime=RuntimeConfig.from_env()
+            runtime=RuntimeConfig.from_env(),
+            cos=COSConfig.from_env()
         )
     
     def initialize(self):
@@ -242,6 +283,11 @@ def get_path_config() -> PathConfig:
 def get_runtime_config() -> RuntimeConfig:
     """获取运行配置"""
     return get_config().runtime
+
+
+def get_cos_config() -> COSConfig:
+    """获取 COS 配置"""
+    return get_config().cos
 
 
 # 测试

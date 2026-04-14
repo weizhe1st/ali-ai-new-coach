@@ -65,7 +65,7 @@ class ReplyBuilder:
     
     def _build_video_reply(self, execution_result: Dict[str, Any]) -> Dict[str, Any]:
         """
-        构建视频分析任务回复
+        构建视频分析任务回复（详细版）
         
         Args:
             execution_result: TaskExecutor 返回的执行结果
@@ -80,38 +80,70 @@ class ReplyBuilder:
         # 提取关键信息
         ntrp_level = result.get('ntrp_level', 'N/A') if result else 'N/A'
         score = result.get('overall_score', 0) if result else 0
+        confidence = result.get('confidence', 0) * 100 if result else 0
         
         # 构建标题
-        title = "🎾 发球分析已完成"
+        title = "🎾 网球发球分析报告"
         
         # 构建核心消息（摘要）
-        message = f"NTRP {ntrp_level}级，综合评分{score}/100"
+        message = f"NTRP {ntrp_level}级（置信度{confidence:.0f}%），综合评分{score}/100"
         
-        # 构建详情列表
+        # 构建详情列表（详细版）
         details = []
         
-        # 如果有报告，添加到详情
-        if report:
-            details.append(report)
+        # 1. 综合评估
+        eval_section = "📊 综合评估\n"
+        eval_section += "━"*40 + "\n"
+        eval_section += f"  NTRP 等级：{ntrp_level}\n"
+        eval_section += f"  置信度：{confidence:.0f}%\n"
+        eval_section += f"  综合评分：{score}/100\n"
+        details.append(eval_section)
         
-        # 提取关键问题（如果有结构化结果）
-        key_issues = result.get('key_issues', []) if result else []
+        # 2. 亮点（如果有）
+        highlights = result.get('highlights', [])
+        if highlights:
+            highlight_section = "✅ 做得好的地方\n"
+            highlight_section += "━"*40 + "\n"
+            for h in highlights:
+                highlight_section += f"  ✓ {h}\n"
+            details.append(highlight_section)
+        
+        # 3. 关键问题（详细版）
+        key_issues = result.get('key_issues', [])
         if key_issues:
-            issues_text = "关键问题："
-            for issue in key_issues[:3]:  # 最多显示 3 个
+            issues_section = "⚠️ 需要改进\n"
+            issues_section += "━"*40 + "\n"
+            severity_map = {'critical': '🔴 严重', 'major': '🟠 重要', 'minor': '🟡 一般'}
+            for issue in key_issues:
+                phase = issue.get('phase', '')
                 severity = issue.get('severity', 'minor')
-                emoji = {'critical': '🔴', 'major': '🟠', 'minor': '🟡'}.get(severity, '⚪')
                 desc = issue.get('description', '')
-                issues_text += f"\n  {emoji} {desc}"
-            details.append(issues_text)
+                severity_label = severity_map.get(severity, '⚪')
+                issues_section += f"  {severity_label} [{phase}] {desc}\n"
+            details.append(issues_section)
         
-        # 提取训练建议
-        priorities = result.get('training_priorities', []) if result else []
+        # 4. 训练建议（详细版）
+        priorities = result.get('training_priorities', [])
         if priorities:
-            suggestions_text = "训练建议："
-            for i, p in enumerate(priorities[:3], 1):
-                suggestions_text += f"\n  {i}. {p}"
-            details.append(suggestions_text)
+            suggestion_section = "💪 训练建议\n"
+            suggestion_section += "━"*40 + "\n"
+            for i, p in enumerate(priorities[:5], 1):
+                suggestion_section += f"  {i}. {p}\n"
+            details.append(suggestion_section)
+        
+        # 5. 教练知识点（如果有）
+        coach_refs = result.get('coach_references', {})
+        if coach_refs:
+            coach_section = "📚 教练知识点\n"
+            coach_section += "━"*40 + "\n"
+            for coach, refs in coach_refs.items():
+                if isinstance(refs, list):
+                    count = len(refs)
+                else:
+                    count = refs
+                if count > 0:
+                    coach_section += f"  👤 {coach}: {count} 条\n"
+            details.append(coach_section)
         
         return {
             'success': True,
@@ -304,11 +336,12 @@ class ReplyBuilder:
         if details:
             for detail in details:
                 lines.append(detail)
-            lines.append("")
+                lines.append("")  # 每个部分之间加空行
         
-        # 任务 ID（可选，用于调试）
+        # 任务编号（放在最后）
         task_id = reply.get('task_id')
         if task_id:
+            lines.append("━"*40)
             lines.append(f"任务编号：{task_id}")
         
         return '\n'.join(lines)

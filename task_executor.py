@@ -34,6 +34,7 @@ from task_logger import (
 )
 from video_input_handler import prepare_video_input
 from analysis_service import AnalysisService
+from cos_uploader import COSUploader
 
 
 class TaskExecutor:
@@ -175,6 +176,30 @@ class TaskExecutor:
             log_video_execution_success(task)
             
             print(f"  ✅ 视频分析完成")
+            
+            # 步骤 5: 样本归档（分析成功后自动上传 COS + 标记候选黄金样本）
+            try:
+                print(f"  📦 准备样本归档...")
+                from sample_archive_service import SampleArchiveService
+                
+                archive_service = SampleArchiveService()
+                archive_result = archive_service.archive_after_analysis(task, analysis_result)
+                
+                if archive_result.get('archived'):
+                    task.extra = task.extra or {}
+                    task.extra['cos_key'] = archive_result.get('cos_key')
+                    task.extra['cos_url'] = archive_result.get('cos_url')
+                    task.extra['candidate_for_golden'] = archive_result.get('candidate_for_golden', False)
+                    
+                    print(f"  ✅ 样本已归档到 COS")
+                    if archive_result.get('candidate_for_golden'):
+                        print(f"  🌟 已标记为候选黄金样本")
+                else:
+                    print(f"  ⚠️  样本归档跳过：{archive_result.get('reason', 'unknown')}")
+                    
+            except Exception as e:
+                print(f"  ⚠️  样本归档失败（不影响主流程）: {e}")
+            
             return self._build_success_result(task, message, analysis_result)
             
         except Exception as e:
@@ -347,6 +372,57 @@ class TaskExecutor:
             'started_at': task.started_at,
             'completed_at': task.completed_at
         }
+    
+    def _upload_to_cos(self, task: UnifiedTask, analysis_result: Dict[str, Any]) -> Optional[str]:
+        """
+        上传视频和报告到 COS
+        
+        Args:
+            task: UnifiedTask 对象
+            analysis_result: 分析结果
+        
+        Returns:
+            str: COS Key（上传成功）或 None（失败）
+        """
+        
+        # 检查是否有视频文件路径
+        video_path = task.source_file_path
+        if not video_path or not os.path.exists(video_path):
+            print(f"  ⚠️  视频文件不存在，跳过 COS 上传")
+            return None
+        
+        # 创建 COS 上传器
+        uploader = COSUploader()
+        
+        # 上传视频
+        video_name = task.source_file_name or os.path.basename(video_path)
+        cos_key = uploader.upload_video(
+            local_path=video_path,
+            task_id=task.task_id,
+            video_name=video_name,
+            is_golden=False  # 当前不是黄金样本
+        )
+        
+        # 如果有报告，也上传报告
+        report = analysis_result.get('report')
+        if report and cos_key:
+            # 保存报告到临时文件
+            import tempfile
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as f:
+                f.write(report)
+                report_path = f.name
+            
+            try:
+                uploader.upload_report(
+                    report_path=report_path,
+                    task_id=task.task_id,
+                    report_name='report.txt'
+                )
+            finally:
+                # 清理临时文件
+                os.unlink(report_path)
+        
+        return cos_key
 
 
 # 便捷函数
