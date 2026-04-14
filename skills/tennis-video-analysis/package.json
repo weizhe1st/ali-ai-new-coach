@@ -1,0 +1,22 @@
+{
+  "name": "tennis-video-analysis",
+  "version": "1.0.0",
+  "description": "网球发球视频 AI 分析 Skill",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "@openclaw/core": "^1.0.0",
+    "axios": "^1.6.0",
+    "cos-nodejs-sdk-v5": "^2.14.0",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/uuid": "^9.0.0",
+    "typescript": "^5.0.0"
+  }
+}

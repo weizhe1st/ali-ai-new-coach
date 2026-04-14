@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "skills": {
+    "searxng": {
+      "version": "1.0.3",
+      "installedAt": 1774332601825
+    },
+    "skill-vetter": {
+      "version": "1.0.0",
+      "installedAt": 1774420727922
+    },
+    "agent-browser": {
+      "version": "0.2.0",
+      "installedAt": 1774420885820
+    },
+    "self-improving-agent": {
+      "version": "3.0.6",
+      "installedAt": 1774420911706
+    },
+    "proactive-agent": {
+      "version": "3.1.0",
+      "installedAt": 1774420941292
+    }
+  }
+}
