@@ -74,7 +74,8 @@ class SampleReviewService:
         """检查样本是否存在"""
         return self.get_sample(sample_id) is not None
     
-    def list_samples(self, status: str = None, action_type: str = None, 
+    def list_samples(self, status: str = None, action_type: str = None,
+                    category: str = None, ntrp: str = None,
                     limit: int = 0) -> List[dict]:
         """
         列出样本（支持过滤）
@@ -82,6 +83,8 @@ class SampleReviewService:
         Args:
             status: 审核状态过滤
             action_type: 动作类型过滤
+            category: 样本分类过滤
+            ntrp: NTRP 等级过滤
             limit: 数量限制（0 表示不限制）
         
         Returns:
@@ -95,6 +98,15 @@ class SampleReviewService:
         
         if action_type:
             records = [r for r in records if r.get('action_type') == action_type]
+        
+        if category:
+            records = [r for r in records if r.get('sample_category') == category]
+        
+        if ntrp:
+            # 支持多种 NTRP 字段位置
+            records = [r for r in records if 
+                      r.get('ntrp_level') == ntrp or 
+                      r.get('analysis_summary', {}).get('ntrp_level') == ntrp]
         
         # 限制数量
         if limit > 0:

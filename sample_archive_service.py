@@ -237,6 +237,14 @@ class SampleArchiveService:
         
         return True
     
+    def _generate_sample_id(self, task_id: str) -> str:
+        """生成样本 ID"""
+        # 使用 task_id 生成 sample_id
+        # 格式：sample_YYYYMMDD_XXXX
+        date_str = datetime.now().strftime('%Y%m%d')
+        short_id = task_id[-6:] if len(task_id) >= 6 else task_id
+        return f"sample_{date_str}_{short_id}"
+    
     def _save_sample_record(self, sample_record: Dict[str, Any]):
         """保存样本记录到登记表"""
         # 确保目录存在
@@ -250,6 +258,11 @@ class SampleArchiveService:
                     records = json.load(f)
             except:
                 records = []
+        
+        # 生成 sample_id（如果没有）
+        if 'sample_id' not in sample_record:
+            task_id = sample_record.get('task_id', 'unknown')
+            sample_record['sample_id'] = self._generate_sample_id(task_id)
         
         # 添加新记录
         records.append(sample_record)

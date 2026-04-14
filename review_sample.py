@@ -104,6 +104,8 @@ def cmd_list(args):
     records = service.list_samples(
         status=args.status,
         action_type=args.action_type,
+        category=args.category,
+        ntrp=args.ntrp,
         limit=args.limit
     )
     
@@ -129,12 +131,20 @@ def cmd_list(args):
     
     print(f"\n总计：{len(records)} 个样本")
     
+    filters = []
     if args.status:
-        print(f"过滤条件：status={args.status}")
+        filters.append(f"status={args.status}")
     if args.action_type:
-        print(f"过滤条件：action_type={args.action_type}")
+        filters.append(f"action_type={args.action_type}")
+    if args.category:
+        filters.append(f"category={args.category}")
+    if args.ntrp:
+        filters.append(f"ntrp={args.ntrp}")
     if args.limit and len(records) == args.limit:
-        print(f"数量限制：{args.limit}")
+        filters.append(f"limit={args.limit}")
+    
+    if filters:
+        print(f"过滤条件：{', '.join(filters)}")
     
     print()
     return 0
@@ -342,6 +352,8 @@ def main():
     list_parser = subparsers.add_parser('list', help='列出样本')
     list_parser.add_argument('--status', help='审核状态过滤')
     list_parser.add_argument('--action-type', help='动作类型过滤')
+    list_parser.add_argument('--category', help='样本分类过滤')
+    list_parser.add_argument('--ntrp', help='NTRP 等级过滤')
     list_parser.add_argument('--limit', type=int, default=0, help='数量限制')
     list_parser.set_defaults(func=cmd_list)
     
