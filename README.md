@@ -76,7 +76,11 @@ ai-coach/
 ├── .gitignore
 ├── .env.example               # 环境变量模板
 ├── requirements.txt
-└── README.md
+├── README.md                  # 项目说明（本文档）
+├── SYSTEM_ENTRYPOINTS.md      # 系统入口说明（主链路定义）
+├── LEGACY_FILES_STATUS.md     # Legacy 文件状态说明
+├── SAMPLE_REGISTRY_SCHEMA.md  # 样本登记表 Schema
+└── EXECUTION_RESULT_SCHEMA.md # 执行结果 Schema
 ```
 
 ### 模块状态说明
