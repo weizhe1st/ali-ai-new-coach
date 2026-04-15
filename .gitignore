@@ -47,6 +47,11 @@ media/inbound/*.avi
 # 任务工作目录
 data/tasks/
 
+# 运行态数据（不提交到 Git）
+data/sample_registry.json
+data/*.db
+!data/.gitkeep
+
 # 分析报告（可选，根据需要决定是否提交）
 # reports/*.json
 # reports/*.txt

@@ -1,0 +1,31 @@
+[
+  {
+    "sample_id": "sample_YYYYMMDD_XXXXXX",
+    "source_type": "new_archive",
+    "action_type": "video_analysis_serve",
+    "source_file_name": "video-xxxxxxxxxxxxx.mp4",
+    "source_file_path": "/path/to/video.mp4",
+    "cos_key": "analyzed/serve/YYYY-MM-DD/task_id_filename.mp4",
+    "cos_url": "https://bucket.cos.region.myqcloud.com/analyzed/serve/...",
+    "candidate_cos_key": "candidate_golden/serve/YYYY-MM-DD/...",
+    "candidate_for_golden": true,
+    "golden_review_status": "pending",
+    "analysis_summary": {
+      "ntrp_level": "3.5",
+      "overall_score": 65,
+      "key_issues": [
+        {
+          "issue": "问题描述",
+          "severity": "high",
+          "phase": "loading"
+        }
+      ]
+    },
+    "archived_at": "YYYY-MM-DDTHH:MM:SS",
+    "golden_review_note": "审核备注",
+    "reviewer": "reviewer_name",
+    "reviewed_at": "YYYY-MM-DDTHH:MM:SS",
+    "sample_category": "typical_issue",
+    "tags": ["tag1", "tag2"]
+  }
+]
