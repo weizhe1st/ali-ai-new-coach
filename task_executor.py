@@ -127,24 +127,53 @@ class TaskExecutor:
             # 错误已在 prepare_video_input 中记录
             return self._build_error_result(task, task.error_code, task.error_message, message)
         
-        # 步骤 2: 校验 source_file_path
+        # 步骤 2: 校验 source_file_path（强制校验本地文件已准备完成）
         if not task.source_file_path:
             task.mark_failed(
                 "VIDEO_PATH_MISSING",
                 "source_file_path is not set after video input preparation",
-                "preparing_video_input"
+                "input_prepare"
             )
-            log_task_event(task, "video_path_missing", "source_file_path is not set")
+            log_task_event(
+                task,
+                "video_path_missing",
+                "source_file_path is not set after input preparation",
+                extra={
+                    'error_stage': 'input_prepare',
+                    'error_code': 'VIDEO_PATH_MISSING'
+                }
+            )
             return self._build_error_result(task, "VIDEO_PATH_MISSING", "source_file_path is not set", message)
         
         if not os.path.exists(task.source_file_path):
             task.mark_failed(
                 "VIDEO_FILE_NOT_FOUND",
                 f"Video file not found at {task.source_file_path}",
-                "preparing_video_input"
+                "input_prepare"
             )
-            log_task_event(task, "video_file_not_found", f"File not found at {task.source_file_path}")
+            log_task_event(
+                task,
+                "video_file_not_found",
+                f"File not found at {task.source_file_path}",
+                extra={
+                    'error_stage': 'input_prepare',
+                    'error_code': 'VIDEO_FILE_NOT_FOUND',
+                    'local_video_path': task.source_file_path
+                }
+            )
             return self._build_error_result(task, "VIDEO_FILE_NOT_FOUND", f"Video file not found", message)
+        
+        # 记录结构化日志
+        log_task_event(
+            task,
+            "video_input_validated",
+            f"Video input validated at {task.source_file_path}",
+            extra={
+                'source_type': 'local_file',
+                'local_video_path': task.source_file_path,
+                'video_size_bytes': os.path.getsize(task.source_file_path) if os.path.exists(task.source_file_path) else 0
+            }
+        )
         
         print(f"  ✅ 视频输入已准备：{task.source_file_path}")
         
@@ -152,9 +181,13 @@ class TaskExecutor:
         task.mark_running("executing_video")
         log_video_execution_start(task)
         
-        # 步骤 4: 调用统一分析服务
+        # 步骤 4: 调用统一分析服务（不允许把 URL 直接传给分析服务）
         try:
             print(f"  📹 调用统一分析服务...")
+            
+            # 强制校验：必须传本地文件路径
+            if not task.source_file_path or not os.path.exists(task.source_file_path):
+                raise ValueError(f"Analysis service requires local file path, got: {task.source_file_path}")
             
             # 调用分析服务
             analysis_result = self.analysis_service.analyze_video(task)
@@ -163,8 +196,17 @@ class TaskExecutor:
             if not analysis_result.get('success'):
                 error_code = analysis_result.get('error', {}).get('code', 'VIDEO_ANALYSIS_FAILED')
                 error_message = analysis_result.get('error', {}).get('message', 'Unknown analysis error')
-                task.mark_failed(error_code, error_message, "executing_video")
-                log_video_execution_failure(task, error_code, error_message)
+                task.mark_failed(error_code, error_message, "analysis")
+                log_video_execution_failure(
+                    task,
+                    error_code,
+                    error_message,
+                    extra={
+                        'error_stage': 'analysis',
+                        'error_code': error_code,
+                        'local_video_path': task.source_file_path
+                    }
+                )
                 return self._build_error_result(task, error_code, error_message)
             
             # 标记成功

@@ -186,7 +186,7 @@ def extract_pose_metrics(video_path: str) -> dict:
 
 MEDIAPIPE_ENABLED = True  # 控制开关，False则跳过MediaPipe
 
-def format_for_kimi(metrics: dict, data_quality: dict) -> str:
+def format_for_qwen(metrics: dict, data_quality: dict) -> str:
     """
     将MediaPipe指标格式化为Kimi可读的辅助文字
     

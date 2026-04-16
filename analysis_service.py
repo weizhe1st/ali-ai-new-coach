@@ -35,12 +35,15 @@ class AnalysisService:
     """
     
     def __init__(self):
-        self.analysis_entry = "legacy_adapter"  # 默认使用 legacy adapter
-        print(f"✅ AnalysisService 已初始化 (entry={self.analysis_entry})")
+        # 从配置读取是否启用 legacy fallback
+        import os
+        self.enable_legacy_fallback = os.environ.get('ENABLE_LEGACY_FALLBACK', 'false').lower() == 'true'
+        self.analysis_entry = "complete"  # 默认使用 complete_analysis_service
+        print(f"✅ AnalysisService 已初始化 (entry={self.analysis_entry}, legacy_fallback={self.enable_legacy_fallback})")
     
     def analyze_video(self, task: UnifiedTask) -> Dict[str, Any]:
         """
-        统一视频分析接口
+        统一视频分析接口（带结构化日志）
         
         Args:
             task: UnifiedTask 对象（应已包含 source_file_path）
@@ -49,14 +52,54 @@ class AnalysisService:
             dict: 统一分析结果
         """
         
+        # 从配置获取模型信息
+        from config import get_model_config
+        model_config = get_model_config()
+        
+        # 记录结构化日志
+        log_task_event(
+            task,
+            "analysis_started",
+            f"Starting video analysis with {self.analysis_entry}",
+            extra={
+                'selected_backend': self.analysis_entry,
+                'selected_video_model': model_config.video_model_name,
+                'fallback_used': False,
+                'local_video_path': task.source_file_path,
+                'video_size_bytes': os.path.getsize(task.source_file_path) if task.source_file_path and os.path.exists(task.source_file_path) else 0
+            }
+        )
+        
         # 校验输入
         if not task.source_file_path:
+            log_task_event(
+                task,
+                "analysis_failed",
+                "source_file_path is not set",
+                extra={
+                    'error_stage': 'analysis',
+                    'error_code': 'VIDEO_SOURCE_PATH_MISSING',
+                    'selected_backend': self.analysis_entry,
+                    'selected_video_model': model_config.video_model_name
+                }
+            )
             return self._build_error_result(
                 "VIDEO_SOURCE_PATH_MISSING",
                 "task.source_file_path is not set"
             )
         
         if not os.path.exists(task.source_file_path):
+            log_task_event(
+                task,
+                "analysis_failed",
+                f"Video file not found at {task.source_file_path}",
+                extra={
+                    'error_stage': 'analysis',
+                    'error_code': 'VIDEO_SOURCE_PATH_NOT_FOUND',
+                    'selected_backend': self.analysis_entry,
+                    'selected_video_model': model_config.video_model_name
+                }
+            )
             return self._build_error_result(
                 "VIDEO_SOURCE_PATH_NOT_FOUND",
                 f"Video file not found at {task.source_file_path}"
@@ -65,8 +108,36 @@ class AnalysisService:
         # 调用旧分析能力
         try:
             result = self._call_legacy_analysis(task)
+            
+            # 记录成功日志
+            log_task_event(
+                task,
+                "analysis_completed",
+                f"Video analysis completed with {self.analysis_entry}",
+                extra={
+                    'selected_backend': self.analysis_entry,
+                    'selected_video_model': model_config.video_model_name,
+                    'fallback_used': False,
+                    'success': result.get('success', False)
+                }
+            )
+            
             return self._normalize_result(result, task)
+            
         except Exception as e:
+            # 记录失败日志
+            log_task_event(
+                task,
+                "analysis_failed",
+                f"Analysis failed: {str(e)}",
+                extra={
+                    'error_stage': 'analysis',
+                    'error_code': 'VIDEO_ANALYSIS_FAILED',
+                    'selected_backend': self.analysis_entry,
+                    'selected_video_model': model_config.video_model_name,
+                    'fallback_used': self.enable_legacy_fallback
+                }
+            )
             return self._build_error_result(
                 "VIDEO_ANALYSIS_FAILED",
                 f"Legacy analysis failed: {str(e)}"
@@ -116,10 +187,45 @@ class AnalysisService:
         except Exception as e:
             print(f"⚠️  complete_analysis_service 调用失败：{e}")
         
-        # 备用方案：使用临时 Qwen-VL 实现
-        # TODO: 后续应移除此临时实现，统一使用 legacy adapter
-        print(f"⚠️  使用临时 Qwen-VL 实现（应尽快替换为 legacy adapter）")
-        return self._analyze_with_qwen_vl_temp(task)
+        # 备用方案：使用临时 Qwen-VL 实现（仅在显式配置开启时启用）
+        if self.enable_legacy_fallback:
+            print(f"⚠️  complete analysis failed, legacy fallback ENABLED")
+            print(f"⚠️  使用临时 Qwen-VL 实现（线上默认应关闭）")
+            
+            # 记录 fallback 日志
+            from config import get_model_config
+            model_config = get_model_config()
+            
+            log_task_event(
+                task,
+                "fallback_used",
+                "Legacy fallback enabled, using Qwen-VL temp implementation",
+                extra={
+                    'selected_backend': 'qwen_vl_temp',
+                    'selected_video_model': model_config.video_model_name,
+                    'fallback_used': True,
+                    'fallback_reason': 'complete analysis failed'
+                }
+            )
+            
+            return self._analyze_with_qwen_vl_temp(task)
+        else:
+            print(f"❌  complete analysis failed, legacy fallback DISABLED")
+            print(f"❌  线上默认禁止 Base64 fallback，请检查配置 ENABLE_LEGACY_FALLBACK")
+            
+            # 记录 fallback 禁用日志
+            log_task_event(
+                task,
+                "fallback_disabled",
+                "Legacy fallback is disabled, analysis failed",
+                extra={
+                    'selected_backend': self.analysis_entry,
+                    'fallback_used': False,
+                    'fallback_disabled_reason': 'ENABLE_LEGACY_FALLBACK=false'
+                }
+            )
+            
+            raise Exception("Legacy fallback is disabled. Set ENABLE_LEGACY_FALLBACK=true to enable.")
     
     def _analyze_with_qwen_vl_temp(self, task: UnifiedTask) -> Dict[str, Any]:
         """

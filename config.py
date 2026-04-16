@@ -44,7 +44,7 @@ class ModelConfig:
             video_model_name=os.environ.get('VIDEO_MODEL_NAME', 'qwen-vl-max'),
             text_model_name=os.environ.get('TEXT_MODEL_NAME', 'qwen-max'),
             image_model_name=os.environ.get('IMAGE_MODEL_NAME', 'qwen-vl-max'),
-            analysis_backend=os.environ.get('ANALYSIS_BACKEND', 'legacy'),
+            analysis_backend=os.environ.get('ANALYSIS_BACKEND', 'complete'),
             enable_temp_qwen_fallback=os.environ.get('ENABLE_TEMP_QWEN_FALLBACK', 'false').lower() in ('true', '1', 'yes')
         )
     
@@ -125,6 +125,28 @@ class COSConfig:
             golden_prefix=os.environ.get('COS_GOLDEN_PREFIX', 'golden/'),
             candidate_prefix=os.environ.get('COS_CANDIDATE_PREFIX', 'candidate_golden/'),
             current_month_prefix=current_month
+        )
+
+
+@dataclass
+
+@dataclass
+class VideoDownloadConfig:
+    """视频下载配置"""
+    download_dir: str = "/tmp/video_analysis"
+    timeout_connect: int = 10  # 连接超时（秒）
+    timeout_read: int = 120  # 读取超时（秒）
+    max_size_mb: int = 100  # 最大文件大小（MB）
+    
+    @classmethod
+    def from_env(cls) -> 'VideoDownloadConfig':
+        """从环境变量加载配置"""
+        import os
+        return cls(
+            download_dir=os.environ.get('VIDEO_DOWNLOAD_DIR', '/tmp/video_analysis'),
+            timeout_connect=int(os.environ.get('VIDEO_DOWNLOAD_TIMEOUT_CONNECT', '10')),
+            timeout_read=int(os.environ.get('VIDEO_DOWNLOAD_TIMEOUT_READ', '120')),
+            max_size_mb=int(os.environ.get('MAX_VIDEO_SIZE_MB', '100'))
         )
 
 
@@ -333,3 +355,10 @@ if __name__ == '__main__':
     print("="*60)
     print("✅ 配置加载成功")
     print("="*60 + "\n")
+
+# ═══════════════════════════════════════════════════════════════════
+# 全局常量（供其他模块直接导入）
+# ═══════════════════════════════════════════════════════════════════
+
+MODEL_PROVIDER = os.environ.get('MODEL_PROVIDER', 'qwen')
+MODEL_NAME = os.environ.get('VIDEO_MODEL_NAME', 'qwen-vl-max')
