@@ -1,0 +1,89 @@
+{
+  "version": "1.0",
+  "generated_at": "2026-04-15T21:46:47.269020",
+  "user_sample_id": "batch001_video004",
+  "summary": "NTRP 3.0 级发球分析：主要问题为 knee_bend_insufficient，优先级 high。建议优先改进 1 个阶段，参考 2 个标准示范样本进行练习。",
+  "primary_issue": "knee_bend_insufficient",
+  "secondary_issue": "rotation_insufficient",
+  "matched_problem_pool": "蓄力问题库",
+  "matched_standard_samples": [
+    {
+      "sample_id": "batch003_video003",
+      "ntrp_level": "4.5",
+      "tags": [
+        "ready_good",
+        "toss_consistent",
+        "rotation_good",
+        "follow_through_complete",
+        "power_good"
+      ]
+    },
+    {
+      "sample_id": "batch004_video001",
+      "ntrp_level": "5.0",
+      "tags": [
+        "ready_good",
+        "toss_consistent",
+        "rotation_good",
+        "follow_through_complete",
+        "power_good"
+      ]
+    }
+  ],
+  "phase_comparison": {
+    "toss": {
+      "name": "抛球阶段",
+      "status": "良好",
+      "has_issue": false,
+      "golden_requirements": [
+        "抛球手臂伸直",
+        "抛球高度稳定",
+        "抛球位置在身体正前方"
+      ]
+    },
+    "loading": {
+      "name": "蓄力阶段",
+      "status": "需要改进",
+      "has_issue": true,
+      "golden_requirements": [
+        "膝盖充分弯曲",
+        "髋部充分旋转",
+        "肩部充分转动"
+      ]
+    },
+    "contact": {
+      "name": "击球阶段",
+      "status": "良好",
+      "has_issue": false,
+      "golden_requirements": [
+        "击球点准确",
+        "拍面控制良好",
+        "手臂充分伸展"
+      ]
+    },
+    "follow_through": {
+      "name": "随挥阶段",
+      "status": "良好",
+      "has_issue": false,
+      "golden_requirements": [
+        "随挥动作完整",
+        "随挥方向正确",
+        "身体向前移动"
+      ]
+    }
+  },
+  "priority_gaps": [
+    "优先解决：knee_bend_insufficient",
+    "改进 蓄力阶段 阶段"
+  ],
+  "training_advice": [
+    "加强膝盖蓄力训练，确保充分屈膝",
+    "利用下肢力量发力，不要只用手臂",
+    "练习深蹲跳，增强腿部爆发力"
+  ],
+  "knowledge_keys": [
+    "膝盖蓄力",
+    "下肢发力",
+    "屈膝角度"
+  ]
+}

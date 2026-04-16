@@ -75,7 +75,8 @@ class COSUploader:
                     self.client.put_object(
                         Bucket=self.config.bucket,
                         Body=f,
-                        Key=cos_key
+                        Key=cos_key,
+                        ACL='public-read'  # 设置公开读权限
                     )
                 print(f"✅ 上传成功（SDK）: {cos_key}")
             else:

@@ -1,0 +1,31 @@
+{
+  "batch_id": "002",
+  "batch_name": "Batch 002 - 3.0-4.0 级发球",
+  "upload_date": "2026-04-15T18:05:12.298473",
+  "video_count": 12,
+  "total_size_mb": 26.5361328125,
+  "category_distribution": {
+    "excellent_demo": 4,
+    "typical_issue": 8,
+    "boundary_case": 0
+  },
+  "ntrp_distribution": {
+    "3.5": 6,
+    "3.0": 4,
+    "4.0": 2
+  },
+  "samples": [
+    "batch002_video001",
+    "batch002_video002",
+    "batch002_video003",
+    "batch002_video004",
+    "batch002_video005",
+    "batch002_video006",
+    "batch002_video007",
+    "batch002_video008",
+    "batch002_video009",
+    "batch002_video010",
+    "batch002_video011",
+    "batch002_video012"
+  ]
+}

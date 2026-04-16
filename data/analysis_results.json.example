@@ -1,0 +1,24 @@
+[
+  {
+    "analysis_id": "auto_xxx",
+    "task_id": "auto_xxx",
+    "video_file": "video-xxx.mp4",
+    "analyzed_at": "2026-04-16T08:00:00",
+    "ntrp_level": "3.5",
+    "overall_score": 65,
+    "confidence": 0.75,
+    "phase_analysis": {
+      "ready": {"score": 70, "issues": []},
+      "toss": {"score": 60, "issues": ["toss_inconsistent"]},
+      "loading": {"score": 65, "issues": ["rotation_insufficient"]},
+      "contact": {"score": 75, "issues": []},
+      "follow_through": {"score": 70, "issues": []}
+    },
+    "key_issues": ["toss_inconsistent", "rotation_insufficient"],
+    "training_plan": ["建议 1", "建议 2", "建议 3"],
+    "cos_key": "analyzed/xxx/video-xxx.mp4",
+    "cos_url": "https://...",
+    "report_generated": false,
+    "report_sent": false
+  }
+]

@@ -24,6 +24,9 @@ PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, PROJECT_ROOT)
 
 # 导入现有模块
+from qwen_client import get_qwen_client
+from analysis_result_saver import save_analysis_result
+
 from core import (
     PROMPT_VERSION, KNOWLEDGE_BASE_VERSION, MODEL_NAME,
     SYSTEM_PROMPT, check_input_quality, validate_response
@@ -838,6 +841,19 @@ def analyze_video_complete(video_path, user_id=None, task_id=None):
         print(f"{'='*60}\n")
         
         # 第五步：返回完整结果（包含 task_id 用于后续查询）
+
+        # 保存分析结果到 analysis_results.json
+        save_analysis_result(
+            task_id=task_id,
+            video_path=video_path,
+            ntrp_level=ntrp_level,
+            overall_score=overall_score,
+            confidence=confidence,
+            normalized_result=normalized_result,
+            cos_key=locals().get('cos_key'),
+            cos_url=locals().get('cos_url')
+        )
+
         return {
             'success': True,
             'task_id': task_id,

@@ -1,0 +1,23 @@
+{
+  "batch_id": "004_sup",
+  "batch_name": "Batch 004 补充 - 5.0+ 级发球",
+  "upload_date": "2026-04-15T18:11:44.657404",
+  "video_count": 5,
+  "total_size_mb": 11.610225677490234,
+  "category_distribution": {
+    "excellent_demo": 3,
+    "typical_issue": 2,
+    "boundary_case": 0
+  },
+  "ntrp_distribution": {
+    "5.0": 3,
+    "4.5": 2
+  },
+  "samples": [
+    "batch004_sup_video001",
+    "batch004_sup_video002",
+    "batch004_sup_video003",
+    "batch004_sup_video004",
+    "batch004_sup_video005"
+  ]
+}

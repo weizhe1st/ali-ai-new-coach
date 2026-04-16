@@ -1,0 +1,90 @@
+{
+  "version": "1.0",
+  "generated_at": "2026-04-15T21:46:47.268468",
+  "user_sample_id": "batch001_video001",
+  "summary": "NTRP 2.5 级发球分析：主要问题为 toss_inconsistent，优先级 high。建议优先改进 2 个阶段，参考 2 个标准示范样本进行练习。",
+  "primary_issue": "toss_inconsistent",
+  "secondary_issue": "knee_bend_insufficient",
+  "matched_problem_pool": "抛球问题库",
+  "matched_standard_samples": [
+    {
+      "sample_id": "batch003_video003",
+      "ntrp_level": "4.5",
+      "tags": [
+        "ready_good",
+        "toss_consistent",
+        "rotation_good",
+        "follow_through_complete",
+        "power_good"
+      ]
+    },
+    {
+      "sample_id": "batch004_video001",
+      "ntrp_level": "5.0",
+      "tags": [
+        "ready_good",
+        "toss_consistent",
+        "rotation_good",
+        "follow_through_complete",
+        "power_good"
+      ]
+    }
+  ],
+  "phase_comparison": {
+    "toss": {
+      "name": "抛球阶段",
+      "status": "需要改进",
+      "has_issue": true,
+      "golden_requirements": [
+        "抛球手臂伸直",
+        "抛球高度稳定",
+        "抛球位置在身体正前方"
+      ]
+    },
+    "loading": {
+      "name": "蓄力阶段",
+      "status": "需要改进",
+      "has_issue": true,
+      "golden_requirements": [
+        "膝盖充分弯曲",
+        "髋部充分旋转",
+        "肩部充分转动"
+      ]
+    },
+    "contact": {
+      "name": "击球阶段",
+      "status": "良好",
+      "has_issue": false,
+      "golden_requirements": [
+        "击球点准确",
+        "拍面控制良好",
+        "手臂充分伸展"
+      ]
+    },
+    "follow_through": {
+      "name": "随挥阶段",
+      "status": "良好",
+      "has_issue": false,
+      "golden_requirements": [
+        "随挥动作完整",
+        "随挥方向正确",
+        "身体向前移动"
+      ]
+    }
+  },
+  "priority_gaps": [
+    "优先解决：toss_inconsistent",
+    "改进 蓄力阶段 阶段",
+    "改进 抛球阶段 阶段"
+  ],
+  "training_advice": [
+    "练习抛球稳定性，确保每次抛球高度一致",
+    "抛球手臂应充分伸直，避免弯曲",
+    "抛球位置应在身体正前方，不要偏前或偏后"
+  ],
+  "knowledge_keys": [
+    "抛球稳定性",
+    "抛球高度控制",
+    "抛球位置"
+  ]
+}

@@ -1,0 +1,250 @@
+{
+  "version": "2.0",
+  "created_at": "2026-04-16T07:21:09.134838",
+  "created_by": "auto_restore_20260416",
+  "source": "yangchao_knowledge_v2",
+  "total_items": 71,
+  "issue_mapping": {
+    "toss_inconsistent": [
+      {
+        "knowledge_id": "yc_003_01",
+        "title": "分解教学法：将复杂动作拆解为六个阶段",
+        "summary": "把发球分解为准备、抛球、奖杯姿势、挥拍、击球、随挥六个阶段，逐个练习掌握后再整合，降低学习难度",
+        "key_elements": [
+          "六个阶段",
+          "逐个练习",
+          "逐步整合"
+        ],
+        "time_range": "01:00-03:30",
+        "video_timestamps": []
+      },
+      {
+        "knowledge_id": "yc_005_01",
+        "title": "3.0发球的四大核心特征：稳定抛球、正确握拍、完整轨迹、合理击球点",
+        "summary": "3.0发球要求：抛球稳定在前上方，使用大陆式握拍，挥拍轨迹完整流畅，击球点在身体前上方合理位置",
+        "key_elements": [
+          "抛球稳定",
+          "大陆式握拍",
+          "完整轨迹",
+          "合理击球点"
+        ],
+        "time_range": "01:00-02:45",
+        "video_timestamps": []
+      },
+      {
+        "knowledge_id": "yc_005_04",
+        "title": "达到3.0的四步训练路径：握拍→站位→抛球→挥拍",
+        "summary": "按顺序突破：先掌握大陆式握拍，再调整正确站位，然后练习稳定抛球，最后建立完整挥拍，四步缺一不可",
+        "key_elements": [
+          "握拍",
+          "站位",
+          "抛球",
+          "挥拍"
+        ],
+        "time_range": "06:25-08:50",
+        "video_timestamps": []
+      },
+      {
+        "knowledge_id": "yc_008_03",
+        "title": "手指释放技术：轻推而非抛掷",
+        "summary": "抛球时用手指轻推球底部，而非手掌抛掷，这样球不旋转且轨迹稳定，拇指和食指最后离开球",
+        "key_elements": [
+          "手指轻推",
+          "拇指食指最后离开",
+          "球不旋转"
+        ],
+        "time_range": "05:45-07:30",
+        "video_timestamps": []
+      },
+      {
+        "knowledge_id": "yc_008_04",
+        "title": "抛球与身体协调：同步转体",
+        "summary": "抛球动作应与身体转体同步进行，抛球开始时身体开始转动，球到最高点时身体完成转体准备击球",
+        "key_elements": [
+          "抛球与转体同步",
+          "球到最高点身体就位",
+          "节奏协调"
+        ],
+        "time_range": "07:35-09:20",
+        "video_timestamps": []
+      },
+      {
+        "knowledge_id": "yc_009_01",
+        "title": "职业选手抛球的手臂伸直技术",
+        "summary": "观察职业选手抛球时手臂完全伸直，肘关节不弯曲，形成直线杠杆，这样抛球高度和方向更稳定",
+        "key_elements": [
+          "手臂完全伸直",
+          "肘关节锁定",
+          "直线杠杆"
+        ],
+        "time_range": "01:00-02:45",
+        "video_timestamps": []
+      },
+      {
+        "knowledge_id": "yc_009_02",
+        "title": "职业选手的非持拍手运用",
+        "summary": "职业选手非持拍手在抛球过程中起到平衡和引导作用，抛球后自然下落，不干扰身体转动",
+        "key_elements": [
+          "非持拍手平衡",
+          "自然下落",
+          "不干扰转体"
+        ],
+        "time_range": "02:50-04:30",
+        "video_timestamps": []
+      },
+      {
+        "knowledge_id": "yc_009_03",
+        "title": "职业选手抛球的视线焦点",
+        "summary": "职业选手抛球时目光跟随球到最高点，然后视线转移到预期击球点，形成视觉引导链",
+        "key_elements": [
+          "目光跟随球",
+          "视线转移",
+          "视觉引导链"
+        ],
+        "time_range": "04:35-06:15",
+        "video_timestamps": []
+      },
+      {
+        "knowledge_id": "yc_009_04",
+        "title": "从模仿到内化：职业选手抛球的学习路径",
+        "summary": "先模仿职业选手抛球的外在形式，再理解其力学原理，最后内化为自己的稳定技术",
+        "key_elements": [
+          "模仿外形",
+          "理解原理",
+          "内化技术"
+        ],
+        "time_range": "06:20-08:45",
+        "video_timestamps": []
+      },
+      {
+        "knowledge_id": "yc_013_01",
+        "title": "旋内练习的分解步骤",
+        "summary": "先练习无球旋内动作，再练习抛球后旋内，最后整合到完整发球中，分三步建立旋内技术",
+        "key_elements": [
+          "无球旋内",
+          "抛球旋内",
+          "完整整合"
+        ],
+        "time_range": "01:10-02:50",
+        "video_timestamps": []
+      },
+      {
+        "knowledge_id": "yc_018_03",
+        "title": "腿部蹬地的时机与幅度",
+        "summary": "蹬地应在抛球达到最高点前开始，在击球时达到最大伸展，幅度以能向上跳起为准",
+        "key_elements": [
+          "蹬地时机",
+          "最大伸展",
+          "向上跳起"
+        ],
+        "time_range": "04:35-06:20",
+        "video_timestamps": []
+      },
+      {
+        "knowledge_id": "yc_018_04",
+        "title": "从4.0到5.0的腿部训练方法",
+        "summary": "先练习无球蹬地，再练习抛球后蹬地，最后整合到完整发球，逐步建立腿部发力习惯",
+        "key_elements": [
+          "无球蹬地",
+          "抛球蹬地",
+          "完整整合"
+        ],
+        "time_range": "06:25-08:40",
+        "video_timestamps": []
+      }
+    ],
+    "toss_height_high": [
+      {
+        "knowledge_id": "yc_008_02",
+        "title": "抛球高度的理想标准：伸直手臂+拍长",
+        "summary": "抛球高度应达到伸直手臂后球拍能够到的最高点再加一个拍面长度，约2-2.5米，为充分挥拍留出时间",
+        "key_elements": [
+          "伸直手臂高度",
+          "加一个拍面长度",
+          "2-2.5米范围"
+        ],
+        "time_range": "03:20-05:40",
+        "video_timestamps": []
+      }
+    ],
+    "toss_position_back": [
+      {
+        "knowledge_id": "yc_008_01",
+        "title": "抛球偏后的根本原因：手臂后摆习惯",
+        "summary": "抛球时手臂不自觉向后摆动，导致球落在身体后方或头顶位置，正确的抛球手臂应直上直下",
+        "key_elements": [
+          "手臂直上直下",
+          "避免后摆",
+          "落点在前脚内侧"
+        ],
+        "time_range": "01:20-03:15",
+        "video_timestamps": []
+      }
+    ],
+    "loading_insufficient": [
+      {
+        "knowledge_id": "yc_010_04",
+        "title": "奖杯姿势在挥拍轨迹中的关键作用",
+        "summary": "奖杯姿势是挥拍轨迹的转折点，从向后运动转为向前运动，是蓄力到释放的关键节点",
+        "key_elements": [
+          "奖杯姿势转折点",
+          "蓄力到释放",
+          "轨迹方向改变"
+        ],
+        "time_range": "07:45-09:30",
+        "video_timestamps": []
+      },
+      {
+        "knowledge_id": "yc_011_01",
+        "title": "流畅挥拍的节奏控制：慢-快-慢",
+        "summary": "后摆阶段慢，奖杯姿势停顿蓄力，向前挥拍加速，随挥阶段自然减速，形成快慢变化节奏",
+        "key_elements": [
+          "后摆慢",
+          "奖杯停顿",
+          "前挥快",
+          "随挥慢"
+        ],
+        "time_range": "01:30-03:45",
+        "video_timestamps": []
+      }
+    ],
+    "contact_point_late": [
+      {
+        "knowledge_id": "yc_006_02",
+        "title": "准备姿势的细节：非持拍手、持拍手、身体姿态",
+        "summary": "非持拍手扶球在腰部高度，持拍手放松准备，身体稍前倾，目光看向前方预期击球点",
+        "key_elements": [
+          "非持拍手扶球",
+          "持拍手放松",
+          "身体前倾"
+        ],
+        "time_range": "02:55-05:00",
+        "video_timestamps": []
+      },
+      {
+        "knowledge_id": "yc_012_01",
+        "title": "理想击球点的三维位置",
+        "summary": "击球点应在身体前上方，高度在伸直手臂最高点，距离身体约一臂长，形成最佳的向前击球角度",
+        "key_elements": [
+          "身体前上方",
+          "伸直手臂高度",
+          "一臂长距离"
+        ],
+        "time_range": "01:00-02:45",
+        "video_timestamps": []
+      },
+      {
+        "knowledge_id": "yc_012_04",
+        "title": "击球点、旋内、结束位置的协调配合",
+        "summary": "三个技术环节形成连续动作链：在正确击球点完成旋内，旋内后自然进入结束位置",
+        "key_elements": [
+          "击球点完成旋内",
+          "旋内引导结束",
+          "动作链连贯"
+        ],
+        "time_range": "06:25-08:40",
+        "video_timestamps": []
+      }
+    ]
+  }
+}

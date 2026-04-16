@@ -1,0 +1,78 @@
+{
+  "version": "1.0",
+  "generated_at": "2026-04-15T21:44:32.761701",
+  "user_sample_id": "batch001_video001",
+  "summary": "NTRP 2.5 级发球分析：动作基本规范，继续保持。",
+  "primary_issue": null,
+  "secondary_issue": null,
+  "matched_problem_pool": null,
+  "matched_standard_samples": [
+    {
+      "sample_id": "batch003_video003",
+      "ntrp_level": "4.5",
+      "tags": [
+        "ready_good",
+        "toss_consistent",
+        "rotation_good",
+        "follow_through_complete",
+        "power_good"
+      ]
+    },
+    {
+      "sample_id": "batch004_video001",
+      "ntrp_level": "5.0",
+      "tags": [
+        "ready_good",
+        "toss_consistent",
+        "rotation_good",
+        "follow_through_complete",
+        "power_good"
+      ]
+    }
+  ],
+  "phase_comparison": {
+    "toss": {
+      "name": "抛球阶段",
+      "status": "良好",
+      "has_issue": false,
+      "golden_requirements": [
+        "抛球手臂伸直",
+        "抛球高度稳定",
+        "抛球位置在身体正前方"
+      ]
+    },
+    "loading": {
+      "name": "蓄力阶段",
+      "status": "良好",
+      "has_issue": false,
+      "golden_requirements": [
+        "膝盖充分弯曲",
+        "髋部充分旋转",
+        "肩部充分转动"
+      ]
+    },
+    "contact": {
+      "name": "击球阶段",
+      "status": "良好",
+      "has_issue": false,
+      "golden_requirements": [
+        "击球点准确",
+        "拍面控制良好",
+        "手臂充分伸展"
+      ]
+    },
+    "follow_through": {
+      "name": "随挥阶段",
+      "status": "良好",
+      "has_issue": false,
+      "golden_requirements": [
+        "随挥动作完整",
+        "随挥方向正确",
+        "身体向前移动"
+      ]
+    }
+  },
+  "priority_gaps": [],
+  "training_advice": [],
+  "knowledge_keys": []
+}

@@ -1,0 +1,15 @@
+{
+  "report_version": "v2_problem_pool_standard_compare",
+  "shadow_mode": false,
+  "generated_at": "2026-04-16T08:23:52.542271",
+  "user_sample_id": "auto_04990a8d5019",
+  "summary": "未找到样本：auto_04990a8d5019",
+  "primary_issue": null,
+  "secondary_issue": null,
+  "matched_problem_pool": null,
+  "matched_standard_samples": [],
+  "phase_comparison": {},
+  "priority_gaps": [],
+  "training_advice": [],
+  "knowledge_keys": []
+}
