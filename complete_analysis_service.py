@@ -309,9 +309,18 @@ def analyze_video_complete(video_path, user_id=None, task_id=None):
         
         # 解析结果
         result_text = response.get('content', '')
+        print(f"  📝 Qwen 原始响应长度：{len(result_text)} 字符")
+        print(f"  📝 Qwen 原始响应前 200 字符：{result_text[:200]}...")
+        
         analysis_result = _parse_json_robust(result_text)
         
-        print(f"  ✓ QWEN 分析完成")
+        if analysis_result.get('success'):
+            print(f"  ✓ QWEN 分析完成")
+            print(f"  ✓ JSON 解析成功")
+            print(f"  ✓ NTRP: {analysis_result.get('structured_result', {}).get('ntrp_level', '未知')}")
+        else:
+            print(f"  ❌ JSON 解析失败：{analysis_result.get('error')}")
+            print(f"  ❌ 原始响应：{result_text[:500]}...")
         
         # 5. 整合 MediaPipe 结果
         print("\n[5/8] 整合量化指标...")
