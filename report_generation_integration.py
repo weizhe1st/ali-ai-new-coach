@@ -421,6 +421,17 @@ class ReportGenerator:
         # 构建 sample_id 到 sample 的映射
         self.sample_map = {s.get('sample_id'): s for s in self.registry}
         
+        # 加载 analysis_results.json（本次分析结果）
+        self.analysis_results = []
+        analysis_results_path = os.path.join(os.path.dirname(self.index_path), 'analysis_results.json')
+        if os.path.exists(analysis_results_path):
+            try:
+                with open(analysis_results_path, 'r', encoding='utf-8') as f:
+                    self.analysis_results = json.load(f)
+                print(f"✓ analysis_results.json 已加载 ({len(self.analysis_results)} 条记录)")
+            except Exception as e:
+                print(f"⚠ analysis_results.json 加载失败：{e}")
+        
         # 提取标准示范样本
         self.standard_samples = [
             s for s in self.registry 
@@ -459,12 +470,23 @@ class ReportGenerator:
             'knowledge_keys': []
         }
         
-        # 获取用户样本
-        if user_sample_id not in self.sample_map:
-            report['summary'] = f'未找到样本：{user_sample_id}'
-            return report
+        # 获取用户样本（优先从 analysis_results.json 读取本次分析结果）
+        user_sample = None
         
-        user_sample = self.sample_map[user_sample_id]
+        # 1. 先尝试从 analysis_results.json 读取
+        for result in self.analysis_results:
+            if result.get('task_id') == user_sample_id:
+                user_sample = result
+                print(f"✓ 从 analysis_results.json 读取到本次分析结果")
+                break
+        
+        # 2. 如果没有，再从 sample_registry.json 读取
+        if not user_sample:
+            if user_sample_id not in self.sample_map:
+                report['summary'] = f'未找到样本：{user_sample_id}'
+                return report
+            user_sample = self.sample_map[user_sample_id]
+            print(f"✓ 从 sample_registry.json 读取到样本")
         
         # 1. 问题检索结果
         primary_issue = user_sample.get('primary_issue')
