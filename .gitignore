@@ -163,3 +163,21 @@ htmlcov/
 
 # mypy
 .mypy_cache/
+
+# === 归档整理补充（2026-04-17）===
+# .env 本体（原先的 *.env 匹配不到裸 .env）
+.env
+# PID 文件
+*.pid
+# 旧备份 tar.gz
+*.tar.gz
+# Python 运行时
+__pycache__/
+*.pyc
+.venv/
+venv/
+# 模型权重（改为从 COS 或 release asset 下载）
+*.task
+# 归档目录（保留但不被后续误当成活代码）
+archive_bot_driven_*/
+legacy_archive*/

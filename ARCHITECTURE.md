@@ -399,3 +399,13 @@ SCAN_INTERVAL=60
 
 **更新时间**: 2026-04-17 06:33  
 **维护者**: AI Coach Team
+
+---
+
+## 归档说明（2026-04-17）
+
+此文档描述的 scan-driven 架构（`auto_analyze_service.py` → `complete_analysis_service.py`）是**唯一**生产链路。
+
+历史上存在的 bot-driven 架构（`adapters/` → `router.py` → `task_executor.py` → `analysis_service.py`）从未在生产中被调用，已于 2026-04-17 归档至 `archive_bot_driven_20260417/`。
+
+如未来需要 bot-driven 能力，建议基于当前稳定的 `complete_analysis_service` 契约重新设计薄 router 层，而非恢复归档代码。
