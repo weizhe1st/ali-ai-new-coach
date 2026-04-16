@@ -225,7 +225,7 @@ class AutoAnalyzeService:
             logger.info(f"🔄 失败可重试：{task['task_id']} ({task['file_name']}, Retry: {task['retry_count'] if hasattr(task, 'retry_count') else 0})")
         
         logger.info(f"📊 发现 {len(incomplete_tasks)} 个未完成任务")
-        return incomplete_tasks
+        return incomplete_tasks if incomplete_tasks else []
     
     def _compute_file_hash(self, file_path: str) -> str:
         """计算文件哈希值"""
