@@ -14,6 +14,7 @@ import tempfile
 import traceback
 from pathlib import Path
 from datetime import datetime
+from typing import Dict, Any
 
 # 添加项目路径
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -217,19 +218,21 @@ def analyze_video_complete(video_path, user_id=None, task_id=None):
             return {'success': False, 'error': error_msg}
         print("  ✓ 质量检查通过")
         
-        # 2. MediaPipe 姿态分析
-        print("\n[2/8] MediaPipe 姿态分析...")
+        # 2. MediaPipe 姿态分析（辅助量化模块，不参与主裁决）
+        print("\n[2/8] MediaPipe 辅助量化分析（可选）...")
         mp_result = None
         if MEDIAPIPE_ENABLED:
             try:
+                # 注意：MediaPipe 仅作为辅助量化参考，不参与主问题判断
                 mp_result = extract_pose_metrics(video_path)
                 if mp_result:
-                    print(f"  ✓ 姿态分析完成，有效帧：{mp_result.get('raw_samples', 0)}")
+                    print(f"  ✓ 辅助量化完成，有效帧：{mp_result.get('raw_samples', 0)}")
+                    print(f"  ℹ️  MediaPipe 数据仅用于报告中的量化证据，不影响主结论")
                     save_clip_pose_results(clip_id, mp_result.get('data', {}), mp_result.get('metrics', {}))
                 else:
-                    print("  ⚠ MediaPipe 未返回结果")
+                    print("  ⚠ MediaPipe 未返回结果（不影响主分析）")
             except Exception as e:
-                print(f"  ⚠ MediaPipe 失败：{e}")
+                print(f"  ⚠ MediaPipe 失败：{e}（跳过，继续主分析）")
         
         # 3. 上传视频到 COS
         print("\n[3/8] 上传视频到 COS...")
@@ -270,23 +273,38 @@ def analyze_video_complete(video_path, user_id=None, task_id=None):
         else:
             print(f"  ⚠️  无法获取视频 URL，分析可能失败")
         
-        # 正确接入 MediaPipe 数据，并分离 system/user prompt
-        mp_formatted = ""
+        # 准备 MediaPipe 辅助量化数据（仅供 Qwen-VL 参考，不影响主裁决）
+        mp_reference = ""
         if mp_result and mp_result.get('metrics') and mp_result.get('data_quality'):
             try:
-                mp_formatted = format_for_kimi(mp_result['metrics'], mp_result['data_quality'])
-                print(f"✓ MediaPipe 数据已格式化，长度：{len(mp_formatted)} 字符")
+                mp_reference = format_for_kimi(mp_result['metrics'], mp_result['data_quality'])
+                print(f"✓ MediaPipe 辅助数据已格式化，长度：{len(mp_reference)} 字符")
             except Exception as e:
                 print(f"⚠ MediaPipe 格式化失败：{e}")
         
         # 构建 user message 文本
+        # 注意：MediaPipe 数据放在最后，明确标注为"参考"，不影响主分析
         user_text = f"""请严格按照三步分析法分析这段网球发球视频：
 
-第一步（逐帧观察）：逐阶段描述你看到的具体动作，每个阶段覆盖系统提示中的所有锚点，看不清的写"不可见"。
-第二步（标准对照）：将观察结果与三位教练标准对照，明确每个锚点的达标/不达标情况。
-第三步（输出 JSON）：基于前两步推导，填写最终 JSON，不得跳过前两步直接给出结论。
+【第一步：逐帧观察】
+逐阶段描述你看到的具体动作，每个阶段覆盖系统提示中的所有锚点，看不清的写"不可见"。
+**请独立进行视觉观察，不要受后续参考数据影响。**
 
-{mp_formatted}
+【第二步：标准对照】
+将你的观察结果与三位教练标准对照，明确每个锚点的达标/不达标情况。
+
+【第三步：输出 JSON】
+基于前两步的推导，填写最终 JSON，不得跳过前两步直接给出结论。
+
+───────────────────────────────────────────
+【辅助参考】以下量化数据仅供参考，**不要影响你的独立判断**：
+- 如果参考数据与你的视觉观察冲突，**以你的观察为准**
+- 如果参考数据标注"数据不足"，请忽略该项
+- 你是最终决策者，参考数据只是辅助证据
+
+{mp_reference if mp_reference else "（无量化参考数据）"}
+
+───────────────────────────────────────────
 
 只输出 JSON，不含任何其他内容。"""
         
@@ -322,11 +340,14 @@ def analyze_video_complete(video_path, user_id=None, task_id=None):
             print(f"  ❌ JSON 解析失败：{analysis_result.get('error')}")
             print(f"  ❌ 原始响应：{result_text[:500]}...")
         
-        # 5. 整合 MediaPipe 结果
-        print("\n[5/8] 整合量化指标...")
-        if mp_result:
+        # 5. 整合 MediaPipe 辅助量化指标（仅作为报告中的辅助证据）
+        print("\n[5/8] 整合辅助量化指标...")
+        if mp_result and analysis_result.get('success'):
+            # 注意：MediaPipe 数据仅作为辅助证据，不修改主结论
             analysis_result = enhance_vision_result_with_mediapipe(analysis_result, mp_result)
-            print("  ✓ 指标整合完成")
+            print("  ✓ 辅助指标已附加（不影响主结论）")
+        elif mp_result and not analysis_result.get('success'):
+            print("  ⚠ Qwen-VL 分析失败，跳过 MediaPipe 整合")
         
         # 5.5 标准化结果
         print("\n[5.5/8] 标准化分析结果...")

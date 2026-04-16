@@ -185,6 +185,10 @@ class AutoAnalyzeService:
                             
                 except Exception as e:
                     logger.error(f"❌ 处理文件失败 {file_path.name}: {str(e)}")
+        
+        logger.info(f"📊 发现 {len(new_videos)} 个新视频")
+        return new_videos
+    
     def scan_incomplete_tasks(self):
         """
         第二层扫描：查找未完成但可继续处理的任务
