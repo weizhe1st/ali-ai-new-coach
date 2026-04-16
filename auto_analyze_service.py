@@ -139,55 +139,52 @@ class AutoAnalyzeService:
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # 扫描媒体目录
-        for file_path in Path(self.media_dir).glob('*.mp4'):
-            try:
-                file_hash = self._compute_file_hash(str(file_path))
-                
-                # 检查数据库中是否已有该文件
-                cursor.execute('SELECT id FROM video_files WHERE file_hash = ?', (file_hash,))
-                row = cursor.fetchone()
-                
-                if not row:
-                    # 新文件，创建视频文件记录
-                    video_file_id = get_or_create_video_file(str(file_path))
+        # 扫描媒体目录（支持多种视频格式）
+        # 扫描媒体目录（支持多种视频格式）
+        patterns = ['*.mp4', '*.MP4', '*.mov', '*.MOV', '*.avi', '*.AVI']
+        for pattern in patterns:
+            for file_path in Path(self.media_dir).glob(pattern):
+                try:
+                    file_hash = self._compute_file_hash(str(file_path))
                     
-                    if video_file_id:
-                        # 创建分析任务
-                        task_id = create_analysis_task(video_file_id)
+                    # 检查数据库中是否已有该文件
+                    cursor.execute('SELECT id FROM video_files WHERE file_hash = ?', (file_hash,))
+                    row = cursor.fetchone()
+                    
+                    if not row:
+                        # 新文件，创建视频文件记录
+                        video_file_id = get_or_create_video_file(str(file_path))
                         
-                        if task_id:
-                            new_videos.append({
-                                'video_file_id': video_file_id,
-                                'task_id': task_id,
-                                'file_path': str(file_path),
-                                'file_name': file_path.name
-                            })
-                            logger.info(f"✅ 发现新视频：{file_path.name} (Task: {task_id})")
+                        if video_file_id:
+                            # 创建分析任务
+                            task_id = create_analysis_task(video_file_id)
+                            
+                            if task_id:
+                                new_videos.append({
+                                    'video_file_id': video_file_id,
+                                    'task_id': task_id,
+                                    'file_path': str(file_path),
+                                    'file_name': file_path.name
+                                })
+                                logger.info(f"✅ 发现新视频：{file_path.name} (Task: {task_id})")
+                            else:
+                                logger.debug(f"⏭️  跳过 {file_path.name}：任务已存在")
                         else:
-                            logger.debug(f"⏭️  跳过 {file_path.name}：任务已存在")
+                            logger.debug(f"⏭️  跳过 {file_path.name}：视频文件已存在")
                     else:
-                        logger.debug(f"⏭️  跳过 {file_path.name}：视频文件已存在")
-                else:
-                    # 文件已存在，检查是否有未完成的任务
-                    video_file_id = row['id']
-                    cursor.execute('''
-                        SELECT id FROM analysis_tasks 
-                        WHERE video_file_id = ? AND status NOT IN ('completed')
-                    ''', (video_file_id,))
-                    
-                    if not cursor.fetchone():
-                        # 没有未完成的任务，可能是已完成或失败超过最大重试
-                        # 这里可以选择跳过或重新创建任务
-                        logger.debug(f"⏭️  跳过 {file_path.name}：已有完成的任务或无待处理任务")
-                    
-            except Exception as e:
-                logger.error(f"❌ 处理文件失败 {file_path.name}: {str(e)}")
-        
-        conn.close()
-        logger.info(f"📊 发现 {len(new_videos)} 个新视频")
-        return new_videos
-    
+                        # 文件已存在，检查是否有未完成的任务
+                        video_file_id = row['id']
+                        cursor.execute('''
+                            SELECT id FROM analysis_tasks 
+                            WHERE video_file_id = ? AND status NOT IN ('completed')
+                        ''', (video_file_id,))
+                        
+                        if not cursor.fetchone():
+                            # 没有未完成的任务，可能是已完成或失败超过最大重试
+                            logger.debug(f"⏭️  跳过 {file_path.name}：已有完成的任务或无待处理任务")
+                            
+                except Exception as e:
+                    logger.error(f"❌ 处理文件失败 {file_path.name}: {str(e)}")
     def scan_incomplete_tasks(self):
         """
         第二层扫描：查找未完成但可继续处理的任务

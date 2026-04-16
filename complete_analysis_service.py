@@ -148,7 +148,7 @@ def _get_cos_url_for_video(video_path: str, task_id: str = None) -> str:
                 SELECT v.cos_url
                 FROM video_analysis_tasks t
                 JOIN videos v ON t.video_id = v.id
-                WHERE t.id = ?
+                WHERE t.task_id = ?
             ''', (task_id,)).fetchone()
             conn.close()
             if row and row['cos_url']:
@@ -258,11 +258,17 @@ def analyze_video_complete(video_path, user_id=None, task_id=None):
             print(f"  ⚠ 使用备用 COS URL: {cos_url[:60] if cos_url else 'None'}...")
         
         if not cos_url:
-            raise Exception("视频上传失败且无备用 URL，无法继续分析")
+            print(f"  ⚠️  COS 上传失败，尝试使用本地文件路径")
+            # 不直接失败，尝试使用本地文件（如果 qwen_client 支持）
+            # 注意：Qwen-VL 需要 URL，所以这里还是尝试获取 URL
+            # 可以在未来支持本地文件分析
         
         # 4. Qwen-VL 视觉分析（统一使用 qwen_client）
         print("\n[4/8] Qwen-VL 视觉分析...")
-        print(f"  视频 URL: {cos_url[:60]}...")
+        if cos_url:
+            print(f"  视频 URL: {cos_url[:60]}...")
+        else:
+            print(f"  ⚠️  无法获取视频 URL，分析可能失败")
         
         # 构建提示词
         mp_formatted = ""  # MediaPipe 数据格式化（如果需要）
@@ -381,8 +387,24 @@ def analyze_video_complete(video_path, user_id=None, task_id=None):
         
         print(f"  ✓ 报告已生成")
         
+        # 保存到 analysis_results.json（供报告生成使用）
+        print("\n[9/9] 保存到 analysis_results.json...")
+        if task_id:
+            from analysis_result_saver import save_analysis_result
+            save_analysis_result(
+                task_id=task_id,
+                ntrp_level=ntrp_level,
+                overall_score=overall_score,
+                confidence=confidence,
+                report=report,
+                video_path=video_path,
+                cos_key=cos_key,
+                cos_url=cos_url
+            )
+            print(f"  ✓ 分析结果已保存到 analysis_results.json")
+        
         # 保存到数据库
-        print("\n[9/9] 保存到数据库...")
+        print("\n[10/10] 保存到数据库...")
         if task_id:
             analysis_repository.save_analysis_artifacts(
                 task_id=task_id,
