@@ -129,8 +129,6 @@ class COSConfig:
 
 
 @dataclass
-
-@dataclass
 class VideoDownloadConfig:
     """视频下载配置"""
     download_dir: str = "/tmp/video_analysis"

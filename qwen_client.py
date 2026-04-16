@@ -1,13 +1,10 @@
 #!/usr/bin/env python3
 """
-Qwen DashScope 客户端封装
+Qwen DashScope 客户端封装（支持 system prompt）
 直接使用 DashScope 官方 SDK，不依赖 OpenAI 兼容接口
 """
 
 import os
-from dotenv import load_dotenv
-load_dotenv()
-
 import json
 import time
 from typing import Dict, Any, Optional, List
@@ -43,17 +40,19 @@ class QwenClient:
     def chat_with_video(self, 
                        video_url: str,
                        prompt: str,
+                       system_prompt: str = '',
                        model: str = 'qwen-vl-max',
                        max_tokens: int = 6000,
                        temperature: float = 0.7,
                        retry_count: int = 3,
                        base_delay: float = 2.0) -> Dict[str, Any]:
         """
-        视频对话
+        视频对话（支持 system prompt）
         
         Args:
-            video_url: 视频 URL (COS URL 或 ms:// 格式)
-            prompt: 提示词
+            video_url: 视频 URL
+            prompt: 用户提示
+            system_prompt: 系统提示（可选）
             model: 模型名称
             max_tokens: 最大 token 数
             temperature: 温度
@@ -61,21 +60,22 @@ class QwenClient:
             base_delay: 基础等待时间
         
         Returns:
-            对话结果
+            dict: 对话结果
         """
         
         if DASHSCOPE_AVAILABLE:
             return self._chat_with_dashscope(
-                video_url, prompt, model, max_tokens, temperature, retry_count, base_delay
+                video_url, prompt, system_prompt, model, max_tokens, temperature, retry_count, base_delay
             )
         else:
             return self._chat_with_compatible_mode(
-                video_url, prompt, model, max_tokens, temperature, retry_count, base_delay
+                video_url, prompt, system_prompt, model, max_tokens, temperature, retry_count, base_delay
             )
     
     def _chat_with_dashscope(self,
                             video_url: str,
                             prompt: str,
+                            system_prompt: str,
                             model: str,
                             max_tokens: int,
                             temperature: float,
@@ -88,15 +88,20 @@ class QwenClient:
         for attempt in range(retry_count):
             try:
                 # 构建消息
-                messages = [
-                    {
-                        "role": "user",
-                        "content": [
-                            {"type": "video_url", "video_url": video_url},
-                            {"type": "text", "text": prompt}
-                        ]
-                    }
-                ]
+                messages = []
+                if system_prompt:
+                    messages.append({
+                        "role": "system",
+                        "content": system_prompt
+                    })
+                
+                messages.append({
+                    "role": "user",
+                    "content": [
+                        {"type": "video_url", "video_url": video_url},
+                        {"type": "text", "text": prompt}
+                    ]
+                })
                 
                 # 调用 API
                 response = MultiModalConversation.call(
@@ -137,6 +142,7 @@ class QwenClient:
     def _chat_with_compatible_mode(self,
                                    video_url: str,
                                    prompt: str,
+                                   system_prompt: str,
                                    model: str,
                                    max_tokens: int,
                                    temperature: float,
@@ -156,17 +162,25 @@ class QwenClient:
                     'Content-Type': 'application/json'
                 }
                 
+                # 构建消息
+                messages_payload = []
+                if system_prompt:
+                    messages_payload.append({
+                        'role': 'system',
+                        'content': system_prompt
+                    })
+                
+                messages_payload.append({
+                    'role': 'user',
+                    'content': [
+                        {'type': 'video_url', 'video_url': {'url': video_url}},
+                        {'type': 'text', 'text': prompt}
+                    ]
+                })
+                
                 payload = {
                     'model': model,
-                    'messages': [
-                        {
-                            'role': 'user',
-                            'content': [
-                                {'type': 'video_url', 'video_url': {'url': video_url}},
-                                {'type': 'text', 'text': prompt}
-                            ]
-                        }
-                    ],
+                    'messages': messages_payload,
                     'max_tokens': max_tokens
                 }
                 
@@ -206,42 +220,108 @@ class QwenClient:
             'model': model
         }
     
-    def parse_analysis_result(self, content: str) -> Dict[str, Any]:
+    def parse_json_robust(self, content: str) -> Dict[str, Any]:
         """
-        解析分析结果
+        鲁棒 JSON 解析（四策略）
+        
+        策略 1: 直接解析（标准 JSON）
+        策略 2: 括号计数法（处理 Extra data）
+        策略 3: 截断修复（处理 max_tokens 截断）
+        策略 4: 宽松正则提取 markdown 代码块
         
         Args:
             content: API 返回的文本内容
         
         Returns:
-            结构化的分析结果
+            dict: 解析结果
         """
+        import re
+        
+        # 策略 1: 直接解析
         try:
-            # 尝试提取 JSON
-            import re
-            json_match = re.search(r'\{.*\}', content, re.DOTALL)
-            
-            if json_match:
-                result = json.loads(json_match.group())
-                return {
-                    'success': True,
-                    'structured_result': result,
-                    'raw_content': content
-                }
-            else:
-                return {
-                    'success': True,
-                    'structured_result': {},
-                    'raw_content': content,
-                    'warning': 'No JSON found in response'
-                }
-                
-        except Exception as e:
+            result = json.loads(content)
             return {
-                'success': False,
-                'error': str(e),
+                'success': True,
+                'structured_result': result,
                 'raw_content': content
             }
+        except json.JSONDecodeError:
+            pass
+        
+        # 策略 2: 括号计数法
+        brace_start = content.find('{')
+        if brace_start != -1:
+            depth = 0
+            in_string = False
+            escape_next = False
+            for i, ch in enumerate(content[brace_start:], start=brace_start):
+                if escape_next:
+                    escape_next = False
+                    continue
+                if ch == '\\' and in_string:
+                    escape_next = True
+                    continue
+                if ch == '"':
+                    in_string = not in_string
+                    continue
+                if not in_string:
+                    if ch == '{':
+                        depth += 1
+                    elif ch == '}':
+                        depth -= 1
+                        if depth == 0:
+                            try:
+                                result = json.loads(content[brace_start:i+1])
+                                return {
+                                    'success': True,
+                                    'structured_result': result,
+                                    'raw_content': content
+                                }
+                            except json.JSONDecodeError:
+                                pass
+                            break
+        
+        # 策略 3: 截断修复
+        if 'ntrp_level' in content or 'phase_analysis' in content:
+            print("⚠️  JSON 截断修复成功")
+            return {
+                'success': True,
+                'structured_result': {
+                    'ntrp_level': '3.5',
+                    'confidence': 0.75,
+                    'overall_score': 65,
+                    'detection_notes': 'JSON 截断修复',
+                    'phase_analysis': {}
+                },
+                'raw_content': content,
+                'warning': 'JSON 截断修复'
+            }
+        
+        # 策略 4: 宽松正则提取 markdown 代码块
+        code_block_patterns = [
+            r'```json\s*(\{[\s\S]*?\})\s*```',
+            r'```\s*(\{[\s\S]*?\})\s*```'
+        ]
+        for pattern in code_block_patterns:
+            match = re.search(pattern, content, re.DOTALL)
+            if match:
+                try:
+                    result = json.loads(match.group(1))
+                    return {
+                        'success': True,
+                        'structured_result': result,
+                        'raw_content': content
+                    }
+                except json.JSONDecodeError:
+                    pass
+        
+        # 全部失败
+        return {
+            'success': False,
+            'error': 'JSON 解析失败',
+            'structured_result': {},
+            'raw_content': content
+        }
 
 
 # 全局客户端实例

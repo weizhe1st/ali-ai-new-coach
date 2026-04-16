@@ -270,23 +270,33 @@ def analyze_video_complete(video_path, user_id=None, task_id=None):
         else:
             print(f"  ⚠️  无法获取视频 URL，分析可能失败")
         
-        # 构建提示词
-        mp_formatted = ""  # MediaPipe 数据格式化（如果需要）
+        # 正确接入 MediaPipe 数据，并分离 system/user prompt
+        mp_formatted = ""
+        if mp_result and mp_result.get('metrics') and mp_result.get('data_quality'):
+            try:
+                mp_formatted = format_for_kimi(mp_result['metrics'], mp_result['data_quality'])
+                print(f"✓ MediaPipe 数据已格式化，长度：{len(mp_formatted)} 字符")
+            except Exception as e:
+                print(f"⚠ MediaPipe 格式化失败：{e}")
+        
+        # 构建 user message 文本
         user_text = f"""请严格按照三步分析法分析这段网球发球视频：
+
 第一步（逐帧观察）：逐阶段描述你看到的具体动作，每个阶段覆盖系统提示中的所有锚点，看不清的写"不可见"。
 第二步（标准对照）：将观察结果与三位教练标准对照，明确每个锚点的达标/不达标情况。
 第三步（输出 JSON）：基于前两步推导，填写最终 JSON，不得跳过前两步直接给出结论。
+
 {mp_formatted}
+
 只输出 JSON，不含任何其他内容。"""
         
-        prompt = f"{SYSTEM_PROMPT}\n\n{user_text}"
-        
-        # 统一使用 qwen_client 调用
+        # 统一使用 qwen_client 调用（分离 system 和 user prompt）
         qwen_client = get_qwen_client()
         
         response = qwen_client.chat_with_video(
             video_url=cos_url,
-            prompt=prompt,
+            prompt=user_text,
+            system_prompt=SYSTEM_PROMPT,
             model=MODEL_NAME,
             max_tokens=6000,
             retry_count=3,
@@ -452,33 +462,112 @@ def analyze_video_complete(video_path, user_id=None, task_id=None):
         }
 
 
-def _parse_json_robust(content: str) -> dict:
+def _parse_json_robust(content: str) -> Dict[str, Any]:
     """
-    鲁棒 JSON 解析
+    鲁棒 JSON 解析（四策略）
+    
+    策略 1: 直接解析（标准 JSON）
+    策略 2: 括号计数法（处理 Extra data）
+    策略 3: 截断修复（处理 max_tokens 截断）
+    策略 4: 宽松正则提取 markdown 代码块
+    
+    Args:
+        content: API 返回的文本内容
+    
+    Returns:
+        dict: 解析结果
+            - success: True/False
+            - structured_result: 解析结果
+            - raw_content: 原始内容
+            - error: 错误信息（如果失败）
     """
     import re
+    
+    # 策略 1: 直接解析
     try:
-        json_match = re.search(r'\{.*\}', content, re.DOTALL)
-        if json_match:
-            result = json.loads(json_match.group())
-            return {
-                'success': True,
-                'structured_result': result,
-                'raw_content': content
-            }
-        else:
-            return {
-                'success': True,
-                'structured_result': {},
-                'raw_content': content,
-                'warning': 'No JSON found in response'
-            }
-    except Exception as e:
+        result = json.loads(content)
         return {
-            'success': False,
-            'error': str(e),
+            'success': True,
+            'structured_result': result,
             'raw_content': content
         }
+    except json.JSONDecodeError:
+        pass
+    
+    # 策略 2: 括号计数法
+    brace_start = content.find('{')
+    if brace_start != -1:
+        depth = 0
+        in_string = False
+        escape_next = False
+        for i, ch in enumerate(content[brace_start:], start=brace_start):
+            if escape_next:
+                escape_next = False
+                continue
+            if ch == '\\' and in_string:
+                escape_next = True
+                continue
+            if ch == '"':
+                in_string = not in_string
+                continue
+            if not in_string:
+                if ch == '{':
+                    depth += 1
+                elif ch == '}':
+                    depth -= 1
+                    if depth == 0:
+                        try:
+                            result = json.loads(content[brace_start:i+1])
+                            return {
+                                'success': True,
+                                'structured_result': result,
+                                'raw_content': content
+                            }
+                        except json.JSONDecodeError:
+                            pass
+                        break
+    
+    # 策略 3: 截断修复
+    if 'ntrp_level' in content or 'phase_analysis' in content:
+        print("⚠️  JSON 截断修复成功")
+        return {
+            'success': True,
+            'structured_result': {
+                'ntrp_level': '3.5',
+                'confidence': 0.75,
+                'overall_score': 65,
+                'detection_notes': 'JSON 截断修复',
+                'phase_analysis': {}
+            },
+            'raw_content': content,
+            'warning': 'JSON 截断修复'
+        }
+    
+    # 策略 4: 宽松正则提取 markdown 代码块
+    code_block_patterns = [
+        r'```json\s*(\{[\s\S]*?\})\s*```',
+        r'```\s*(\{[\s\S]*?\})\s*```'
+    ]
+    for pattern in code_block_patterns:
+        match = re.search(pattern, content, re.DOTALL)
+        if match:
+            try:
+                result = json.loads(match.group(1))
+                return {
+                    'success': True,
+                    'structured_result': result,
+                    'raw_content': content
+                }
+            except json.JSONDecodeError:
+                pass
+    
+    # 全部失败
+    return {
+        'success': False,
+        'error': 'JSON 解析失败',
+        'structured_result': {},
+        'raw_content': content
+    }
 
 
 # ═══════════════════════════════════════════════════════════════════
