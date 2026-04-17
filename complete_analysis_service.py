@@ -67,9 +67,144 @@ def save_coach_style_report(clip_id, ntrp_level, coach_reports):
     pass
 
 
-def query_unified_knowledge(ntrp_level: str, phase: str, issues: list):
-    """查询统一知识库"""
+# ═══════════════════════════════════════════════════════════════════
+# 知识库查询
+# ═══════════════════════════════════════════════════════════════════
+
+KNOWLEDGE_DB = '/home/admin/.openclaw/workspace/ai-coach/data/db/app.db'
+
+# 代码侧的 4 阶段 -> 数据库侧的 5 阶段映射（B 方案）
+# 数据库用 ready/toss/loading/contact/follow，代码用 preparation/loading/acceleration/follow_through
+_PHASE_MAPPING = {
+    "preparation": ["ready", "toss"],
+    "loading": ["loading"],
+    "acceleration": ["contact"],
+    "follow_through": ["follow"],
+}
+
+
+def _normalize_issues(issues):
+    """把各种格式的 issues 统一成 List[str]。"""
+    if issues is None:
+        return []
+    if isinstance(issues, str):
+        return [issues]
+    if isinstance(issues, list):
+        result = []
+        for item in issues:
+            if isinstance(item, str):
+                result.append(item)
+            elif isinstance(item, dict):
+                v = item.get("issue") or item.get("text") or item.get("description")
+                if v:
+                    result.append(str(v))
+        return result
     return []
+
+
+def _extract_db_issue_tags(raw_value):
+    """把数据库里的 issue_tags 字段解析成 List[str]。适配 TASK-A 发现的格式。"""
+    import json as _json
+    if raw_value is None or raw_value == "" or raw_value == "[]":
+        return []
+    s = str(raw_value).strip()
+    try:
+        parsed = _json.loads(s)
+        if isinstance(parsed, list):
+            return [str(x) for x in parsed]
+    except Exception:
+        pass
+    if "," in s or "," in s:
+        tokens = s.replace(",", ",").split(",")
+        return [t.strip() for t in tokens if t.strip()]
+    return [s]
+
+
+def query_unified_knowledge(ntrp_level: str, phase: str, issues: list):
+    """
+    查询统一知识库。
+    
+    Args:
+        ntrp_level: NTRP 等级（当前 schema 无 NTRP 列，该参数暂未启用，见 TASK-2 诊断）
+        phase: 代码侧阶段名（preparation/loading/acceleration/follow_through）
+        issues: 当前阶段识别出的问题列表（可以是 List[str] / List[Dict] / str / None）
+    
+    Returns:
+        List[Dict]，最多 3 条知识点。匹配不到时尝试 fallback 按 phase 返回 top-3。
+    """
+    import sqlite3 as _sqlite3
+    
+    _ = ntrp_level
+    
+    db_phases = _PHASE_MAPPING.get(phase, [phase])
+    if not db_phases:
+        return []
+    
+    issue_keywords = _normalize_issues(issues)
+    
+    try:
+        conn = _sqlite3.connect(KNOWLEDGE_DB)
+        conn.row_factory = _sqlite3.Row
+        cur = conn.cursor()
+        
+        candidates = []
+        seen_ids = set()
+        for db_phase in db_phases:
+            rows = cur.execute(
+                "SELECT * FROM coach_knowledge WHERE phase LIKE ?",
+                (f'%"{db_phase}"%',)
+            ).fetchall()
+            for r in rows:
+                if r["id"] not in seen_ids:
+                    seen_ids.add(r["id"])
+                    candidates.append(dict(r))
+        
+        if not candidates:
+            conn.close()
+            return []
+        
+        if issue_keywords:
+            scored = []
+            for row in candidates:
+                db_tags = _extract_db_issue_tags(row.get("issue_tags"))
+                tag_hits = sum(1 for kw in issue_keywords for tag in db_tags if kw in tag or tag in kw)
+                ce = row.get("common_errors") or ""
+                err_hits = sum(1 for kw in issue_keywords if kw in ce)
+                score = tag_hits * 10 + err_hits
+                if score > 0:
+                    scored.append((score, row))
+            
+            if scored:
+                scored.sort(key=lambda x: -x[0])
+                selected = [row for _, row in scored[:3]]
+            else:
+                grade_order = {"A": 0, "B": 1, "C": 2, "D": 3, None: 4}
+                candidates.sort(key=lambda r: grade_order.get(r.get("quality_grade"), 5))
+                selected = candidates[:3]
+        else:
+            grade_order = {"A": 0, "B": 1, "C": 2, "D": 3, None: 4}
+            candidates.sort(key=lambda r: grade_order.get(r.get("quality_grade"), 5))
+            selected = candidates[:3]
+        
+        conn.close()
+        
+        result = []
+        for row in selected:
+            result.append({
+                "id": row.get("id"),
+                "coach_id": row.get("coach_id"),
+                "title": row.get("title"),
+                "knowledge_summary": row.get("knowledge_summary"),
+                "common_errors": row.get("common_errors"),
+                "correction_method": row.get("correction_method"),
+                "phase": row.get("phase"),
+                "quality_grade": row.get("quality_grade"),
+            })
+        return result
+        
+    except Exception as e:
+        print(f" ⚠ 知识库查询失败：{e}")
+        return []
 
 
 def query_similar_cases_from_db(ntrp_level: str, limit: int = 3):

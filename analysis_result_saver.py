@@ -39,7 +39,6 @@ def save_analysis_result(task_id, video_path, ntrp_level, overall_score, confide
             'training_plan': normalized_result.get('training_plan', []),
             'cos_key': cos_key,
             'cos_url': cos_url,
-            'report_generated': False,
             'report_sent': False
         }
         
