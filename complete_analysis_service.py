@@ -31,14 +31,12 @@ from qwen_client import get_qwen_client
 from mediapipe_helper import (
     extract_pose_metrics,
     enhance_vision_result_with_mediapipe,
+    format_for_qwen,
     MEDIAPIPE_ENABLED
 )
 from analysis_normalizer import normalize_analysis_result
-from analysis_repository import analysis_repository
 from cos_uploader import COSUploader
 
-# 数据库配置
-DB_PATH = os.path.join(PROJECT_ROOT, 'data', 'xiaolongxia_learning.db')
 COS_BUCKET = 'tennis-ai-1411340868'
 COS_REGION = 'ap-shanghai'
 
@@ -47,63 +45,6 @@ COS_REGION = 'ap-shanghai'
 # 数据库操作函数
 # ═══════════════════════════════════════════════════════════════════
 
-def get_db_connection():
-    """获取数据库连接"""
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
-
-
-def update_video_analysis_task(task_id: str, status: str, **kwargs):
-    """更新视频分析任务状态"""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    update_fields = []
-    values = []
-    
-    if status:
-        update_fields.append("status = ?")
-        values.append(status)
-    
-    if 'ntrp_level' in kwargs:
-        update_fields.append("ntrp_level = ?")
-        values.append(kwargs['ntrp_level'])
-    
-    if 'sample_category' in kwargs:
-        update_fields.append("sample_category = ?")
-        values.append(kwargs['sample_category'])
-    
-    if 'primary_issue' in kwargs:
-        update_fields.append("primary_issue = ?")
-        values.append(kwargs['primary_issue'])
-    
-    if 'secondary_issue' in kwargs:
-        update_fields.append("secondary_issue = ?")
-        values.append(kwargs['secondary_issue'])
-    
-    if 'error_msg' in kwargs:
-        update_fields.append("last_error = ?")
-        values.append(kwargs['error_msg'])
-    
-    if 'cos_key' in kwargs:
-        update_fields.append("cos_key = ?")
-        values.append(kwargs['cos_key'])
-    
-    if 'cos_url' in kwargs:
-        update_fields.append("cos_url = ?")
-        values.append(kwargs['cos_url'])
-    
-    update_fields.append("updated_at = CURRENT_TIMESTAMP")
-    
-    values.append(task_id)
-    
-    if update_fields:
-        query = f"UPDATE video_analysis_tasks SET {', '.join(update_fields)} WHERE task_id = ?"
-        cursor.execute(query, values)
-        conn.commit()
-    
-    conn.close()
 
 
 def save_clip_pose_results(clip_id, pose_data, metrics):
@@ -138,51 +79,15 @@ def query_similar_cases_from_db(ntrp_level: str, limit: int = 3):
 
 def _get_cos_url_for_video(video_path: str, task_id: str = None) -> str:
     """
-    根据 video_path 或 task_id 获取对应的 COS URL。
-    优先从数据库的 video_analysis_tasks + videos 表查询。
+    构造视频的 COS URL（兜底）。
+    
+    注：此前版本有两条 DB 查询分支（query video_analysis_tasks / videos 表），
+    但这两张表所在的 xiaolongxia_learning.db 是空库，分支无效，已移除。
     """
-    # 方式 1: 从数据库查询（task_id 已知时）
-    if task_id:
-        try:
-            conn = get_db_connection()
-            row = conn.execute('''
-                SELECT v.cos_url
-                FROM video_analysis_tasks t
-                JOIN videos v ON t.video_id = v.id
-                WHERE t.task_id = ?
-            ''', (task_id,)).fetchone()
-            conn.close()
-            if row and row['cos_url']:
-                return row['cos_url']
-        except Exception as e:
-            print(f"  ⚠ 数据库查询 COS URL 失败：{e}")
-    
-    # 方式 2: 从数据库按文件名查询
-    file_name = os.path.basename(video_path)
-    try:
-        conn = get_db_connection()
-        row = conn.execute('''
-            SELECT cos_url FROM videos
-            WHERE file_name = ?
-            ORDER BY created_at DESC
-            LIMIT 1
-        ''', (file_name,)).fetchone()
-        conn.close()
-        if row and row['cos_url']:
-            return row['cos_url']
-    except Exception as e:
-        print(f"  ⚠ 按文件名查询 COS URL 失败：{e}")
-    
-    # 方式 3: 构造 COS URL（兜底）
     file_name = os.path.basename(video_path)
     cos_url = f"https://{COS_BUCKET}.cos.{COS_REGION}.myqcloud.com/private-ai-learning/raw_videos/{datetime.now().strftime('%Y-%m-%d')}/{file_name}"
     print(f"  ⚠ 使用构造的 COS URL: {cos_url[:60]}...")
     return cos_url
-
-
-# ═══════════════════════════════════════════════════════════════════
-# 主分析函数（统一使用 qwen_client）
-# ═══════════════════════════════════════════════════════════════════
 
 def analyze_video_complete(video_path, user_id=None, task_id=None):
     """
@@ -213,8 +118,7 @@ def analyze_video_complete(video_path, user_id=None, task_id=None):
         passed, quality_info = check_input_quality(video_path)
         if not passed:
             error_msg = quality_info.get('reason', '视频质量检查未通过')
-            if task_id:
-                update_video_analysis_task(task_id, 'failed', error_msg=error_msg)
+            print(f"  ⚠ 质量检查未通过：{error_msg}")
             return {'success': False, 'error': error_msg}
         print("  ✓ 质量检查通过")
         
@@ -277,7 +181,7 @@ def analyze_video_complete(video_path, user_id=None, task_id=None):
         mp_reference = ""
         if mp_result and mp_result.get('metrics') and mp_result.get('data_quality'):
             try:
-                mp_reference = format_for_kimi(mp_result['metrics'], mp_result['data_quality'])
+                mp_reference = format_for_qwen(mp_result['metrics'], mp_result['data_quality'])
                 print(f"✓ MediaPipe 辅助数据已格式化，长度：{len(mp_reference)} 字符")
             except Exception as e:
                 print(f"⚠ MediaPipe 格式化失败：{e}")
@@ -351,7 +255,11 @@ def analyze_video_complete(video_path, user_id=None, task_id=None):
         
         # 5.5 标准化结果
         print("\n[5.5/8] 标准化分析结果...")
-        raw_result = analysis_result
+        # 注：_parse_json_robust 返回 {"success": bool, "structured_result": {...}, ...}
+        # 真实模型数据在 structured_result 里。normalizer 期望的是扁平的模型输出字典，
+        # 所以这里要剥一层。兜底：如果 structured_result 不存在，fallback 到 analysis_result 本身。
+        raw_result = analysis_result.get('structured_result', analysis_result) \
+            if isinstance(analysis_result, dict) else analysis_result
         model_meta = {
             "provider": MODEL_PROVIDER,
             "model": MODEL_NAME,
@@ -363,6 +271,8 @@ def analyze_video_complete(video_path, user_id=None, task_id=None):
         
         if normalization_warnings:
             print(f"  ⚠ 标准化警告：{len(normalization_warnings)}条")
+            for _i, _w in enumerate(normalization_warnings, 1):
+                print(f"  {_i}. {_w}")
         print("  ✓ 标准化完成")
         
         # 6. 查询知识库
@@ -433,28 +343,17 @@ def analyze_video_complete(video_path, user_id=None, task_id=None):
             from analysis_result_saver import save_analysis_result
             save_analysis_result(
                 task_id=task_id,
+                video_path=video_path,
                 ntrp_level=ntrp_level,
                 overall_score=overall_score,
                 confidence=confidence,
-                report=report,
-                video_path=video_path,
+                normalized_result=normalized_result,
                 cos_key=cos_key,
                 cos_url=cos_url
             )
             print(f"  ✓ 分析结果已保存到 analysis_results.json")
         
-        # 保存到数据库
-        print("\n[10/10] 保存到数据库...")
-        if task_id:
-            analysis_repository.save_analysis_artifacts(
-                task_id=task_id,
-                raw_result=raw_result,
-                normalized_result=normalized_result,
-                report_text=report,
-                report_version='v2'
-            )
-            print(f"  ✓ 分析结果已保存到数据库")
-        
+
         print(f"\n{'='*60}")
         print(f"✅ 分析完成")
         print(f"{'='*60}\n")
@@ -482,9 +381,7 @@ def analyze_video_complete(video_path, user_id=None, task_id=None):
         traceback.print_exc()
         print(f"\n❌ 分析失败：{error_msg}")
         
-        if task_id:
-            update_video_analysis_task(task_id, 'failed', error_msg=error_msg)
-        
+        # 任务状态由上层 auto_analyze_service 通过 auto_analyze_db 更新
         return {
             'success': False,
             'error': error_msg,
