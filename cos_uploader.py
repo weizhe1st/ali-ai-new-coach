@@ -133,7 +133,7 @@ class COSUploader:
         # 构建 COS Key
         prefix = self.config.golden_prefix if is_golden else self.config.analyzed_prefix
         month_prefix = self.config.current_month_prefix
-        cos_key = f"{prefix}{month_prefix}{task_id}/{video_name}"
+        cos_key = f"{prefix}{month_prefix}/{task_id}/{video_name}"
         
         # 上传
         if self.upload_file(local_path, cos_key):
@@ -160,7 +160,7 @@ class COSUploader:
         
         # 构建 COS Key
         month_prefix = self.config.current_month_prefix
-        cos_key = f"{self.config.analyzed_prefix}{month_prefix}{task_id}/{report_name}"
+        cos_key = f"{self.config.analyzed_prefix}{month_prefix}/{task_id}/{report_name}"
         
         # 上传
         if self.upload_file(report_path, cos_key):
