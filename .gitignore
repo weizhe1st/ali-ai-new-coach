@@ -181,3 +181,6 @@ venv/
 # 归档目录（保留但不被后续误当成活代码）
 archive_bot_driven_*/
 legacy_archive*/
+
+# 分析产物，不进版本控制
+data/analysis_results.json
